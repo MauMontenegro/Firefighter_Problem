@@ -120,4 +120,9 @@ if __name__ == '__main__':
     # Dynamic Programming Algorithm
     DPSolution([agent_pos_x,agent_pos_y],8,2,all_nodes,t)
 
+# TO DO
+    # Greedy Strategies: Mas cercano que salve algo
+    # Nodo valido que salve más arboles
+    # Proponer mas estrategias greeedy
+    # Programar DP con Top-Down y Hash tables con arboles como keys
 
