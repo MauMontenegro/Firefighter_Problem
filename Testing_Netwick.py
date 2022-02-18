@@ -14,16 +14,3 @@ t.write(format=1, outfile="new_tree.nw")
     cutting_node = '4-4 '
     saved = SavedNodes(t, cutting_node)
 
-    # Random Policy for at most "threshold" steps
-    while not done and step < threshold:
-        fig = env.render(mode="rgb_array")
-        fig.savefig('Images/Emulation_{f}.png'.format(f=step))
-        plt.close()
-        action = env.action_space.sample()  # Your agent goes here!
-        obs, reward, done, info = env.step(action)
-        total_reward += reward
-        step += 1
-
-    print(f"{ProtoEnv}")
-    print(f"Total Steps: {step}")
-    print(f"Total Reward: {total_reward}")
