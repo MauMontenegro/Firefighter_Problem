@@ -1,0 +1,9 @@
+experiment:
+  env_type: caenv     # Environment Type
+  Seed: 100           # Seed for reproducibility
+  Runs: 10            # How many Runs per Tree
+  Size: 20            # Nodes in Tree or Graph
+  Initial_pos: "7-1" # Initial Agent Node Position
+  wr_l: 0             # Weight Lower Range in edges
+  wr_u: 100           # Weight Upper Range in edges
+  Env_Update: 4       # Environment Update Ticks
