@@ -2,7 +2,7 @@ experiment:
   env_type: rndtree   # Environment Type
   Seed: 100           # Seed for reproducibility
   Runs: 10            # How many Runs per Tree
-  Size: 35           # Nodes in Tree or Graph
+  Size: 31           # Nodes in Tree or Graph
   Initial_pos: 10     # Initial Agent Node Position
   Env_Update: 4       # Environment Update Ticks
   wr_l: 0             # Weight Lower Range in edges
