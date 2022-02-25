@@ -10,16 +10,16 @@ Some Features:
   - DP Solution for Random Trees with Non-Metric Distances
 
 On Progress:
-  -Testing Multiple Fires
-  -Create Graphs with Metric Distances
-  -Testing Other DP Algorithms
+  - Testing Multiple Fires
+  - Create Graphs with Metric Distances
+  - Testing Other DP Algorithms
   
   
   How to execute?:
   python dynaff.py -s dpsolver_mau -i caenv -c rndtree_config
-    -s is the algorithm we want to use
-    -i is the env type in the input
-    -c is the config file for solver and input type
+    - s is the algorithm we want to use
+    - i is the env type in the input
+    - c is the config file for solver and input type
     
   Interface:
   
