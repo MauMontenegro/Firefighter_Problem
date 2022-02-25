@@ -41,7 +41,7 @@ def TreeConstruct(all_nodes, t, grid):
     #print(all_nodes)
 
 
-def caenv(config):
+def caenv(config,pat,file):
     # Initial Env Config
     ProtoEnv = gymca.prototypes[1]
     N = config['experiment']['Size']

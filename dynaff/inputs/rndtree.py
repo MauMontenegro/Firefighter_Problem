@@ -25,9 +25,9 @@ def TreeConstruct(F, all_nodes, Tree):
     return F, all_nodes, max_level
 
 
-def rndtree(config):
+def rndtree(config,path,file):
     # Create a Random Tree with N nodes
-    N = config['experiment']['Nodes']
+    N = config['experiment']['Size']
     seed = config['experiment']['Seed']
     Tree_netx = nx.random_tree(n=N, seed=seed)
     all_nodes = {}
@@ -51,16 +51,14 @@ def rndtree(config):
     # Create a Symmetric Matrix with upper part of A (For symmetric distances)
     A = np.triu(A) + np.tril(A.T)
 
-    # Save Matrix Distance
-    with open('test.npy', 'wb') as f:
-        np.save(f, A)
-
     # Seed for reproducible layout
     pos = nx.spring_layout(Tree_netx, seed=seed)
     labels = nx.get_edge_attributes(Tree_netx, 'weight')
     nx.draw(Tree_netx, pos, with_labels=True)
     nx.draw_networkx_edge_labels(Tree_netx, pos, edge_labels=labels)
-    plt.savefig("Graph.png", format="PNG")
+
+    file_path = path + file + '.png'
+    plt.savefig(file_path, format="PNG")
 
     # Construct Tree Structure using ete3
     F = Tree()  # Initialize a Forest. Tree() is a func in ete3 for Newick format.
