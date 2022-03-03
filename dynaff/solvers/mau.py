@@ -1,4 +1,5 @@
 from dynaff.utilities import utils
+from tqdm import tqdm
 
 
 def Feasible(node_pos, a_pos, time, level, max_budget, config):
@@ -18,7 +19,11 @@ def Feasible(node_pos, a_pos, time, level, max_budget, config):
         return False
 
 
-def dpsolver_mau(a_pos, nodes, F, time, Hash, max_budget, hash_calls, config):
+# Global Hash and Grid
+Hash = {}
+
+
+def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
     # F is the actual Forest
     # a_pos is the actual agent position
     # Remaining time
@@ -35,7 +40,7 @@ def dpsolver_mau(a_pos, nodes, F, time, Hash, max_budget, hash_calls, config):
     # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
     key = F.write(format=8) + ';' + str(time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
 
-    # Search if we already see this Forest Conditions. I not, create new key entry
+    # Search if we already see this Forest Conditions. If not, create new key entry
     if key in Hash:
         h += 1
         return Hash[key]['value'], h
@@ -50,17 +55,24 @@ def dpsolver_mau(a_pos, nodes, F, time, Hash, max_budget, hash_calls, config):
             Valid[node]['level'] = nodes[node]['level']
 
     saved = 0
+    # Progress Bar Creation
+    if time == max_budget:
+        pbar = tqdm(total=len(Valid))
+
     # Traverse Valid node list and compute his value by recurrence
     for valid_node in Valid:
+        if time == max_budget:
+            pbar.update(1)
+
         # Copy of Tree and Valid list to send in following recurrence
         F_copy = F.copy("newick")
 
         # In metric distance envs like "caenv", only send to the following recurrence a copy of valid
         # cause once a node is invalid due delta_time from agent position it never will be valid again.
         # When there are no metric distance envs, like "rndtree", we send all nodes in actual forest (except pruned)
-        if config[0] == "caenv":
+        if config[1] == 1:
             Valid_copy = Valid.copy()
-        if config[0] == "rndtree":
+        if config[1] == 0 :
             Valid_copy = nodes.copy()
 
         # This node will be pruned, so next iter will not ve valid(metric or no metric distances)
@@ -82,7 +94,7 @@ def dpsolver_mau(a_pos, nodes, F, time, Hash, max_budget, hash_calls, config):
             n_y = valid_node
 
         # Solve next sub-problem
-        value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, Hash, max_budget, h, config)
+        value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, max_budget, h, config, recursion +1)
 
         # Fill Valid Node space by is returning best value plus is current saved trees
         Valid[valid_node]['value'] = value + saved
@@ -94,8 +106,12 @@ def dpsolver_mau(a_pos, nodes, F, time, Hash, max_budget, hash_calls, config):
         max_key_node = max(Valid, key=lambda v: Valid[v]['value'])
         Hash[key]['max_node'] = max_key_node
         Hash[key]['value'] = max_value
+        if recursion == 0:
+            return max_value, h, Hash
         return max_value, h
     # If there are no valid nodes for current key then only return saved trees
     else:
         Hash[key]['value'] = saved
+        if recursion == 0:
+            return saved, h, Hash
         return saved, h

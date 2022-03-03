@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     logger = ExperimentLog(path, file)
     input = input_manager(exp_config,path,file)
-
+    print(input)
     # Get Input Variables
     agent_pox_x = input[0][0]
     agent_pox_y = input[0][1]
@@ -96,9 +96,8 @@ if __name__ == '__main__':
     nodes = input[1]
     Forest = input[2]
     time = input[3]
-    Hash = input[4]
-    max_budget = input[5]
-    config = input[6]
+    max_budget = input[4]
+    config = input[5]
 
     stats={}
     stats['env_type'] = exp_config['experiment']['env_type']
@@ -110,7 +109,7 @@ if __name__ == '__main__':
     # Call The solver
     tracing_start()
     start = tm.time()
-    max_saved_trees, Hash_Calls = solver([agent_pox_x, agent_pox_y], nodes, Forest, time, Hash, max_budget, 0, config)
+    max_saved_trees, Hash_Calls, Hash = solver([agent_pox_x, agent_pox_y], nodes, Forest, time, max_budget, 0, config,0)
     end = tm.time()
     print("time elapsed {} milli seconds".format((end - start) * 1000))
     peak = tracing_mem()
@@ -130,8 +129,7 @@ if __name__ == '__main__':
     sol_stats = [Solution, max_saved_trees, Hash, Hash_Calls]
 
     stats['sol'] = Solution
-    stats['max_sav_trees']= max_saved_trees
-    stats['hash'] = Hash
+    stats['max_sav_trees'] = max_saved_trees
     stats['hash_calls'] = Hash_Calls
 
     logger.log_save(stats)

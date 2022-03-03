@@ -6,7 +6,7 @@ def ComputeTime(a_pos, node_pos, config):
         n_y = int(x[1])
         delta_time = max(abs(n_x - a_pos[0]), abs(n_y - a_pos[1]))
     if config[0] == "rndtree":
-        Adj = config[1]
+        Adj = config[2]
         delta_time = Adj[int(node_pos)][int(a_pos[0])]
     return delta_time
 
