@@ -9,7 +9,7 @@ def labeling():
     all_nodes = {}
     root = []
     c = 0
-    with open('arbitrary_grid2') as file:
+    with open('arbitrary_grid') as file:
         reader = csv.reader(file)
         for row in reader:
             label = '{x}-{y} '.format(x=row[0], y=row[1])
@@ -21,7 +21,7 @@ def labeling():
     return all_nodes, root[0], c
 
 
-def TreeConstruct(all_nodes, t, grid):
+def TreeConstruct(all_nodes, t, grid,N):
     for tree_node in all_nodes:
         node_name = tree_node
         level = all_nodes[node_name]['level']
@@ -31,7 +31,7 @@ def TreeConstruct(all_nodes, t, grid):
         father = t.search_nodes(name=node_name)[0]
         for i in range(n_x - 1, n_x + 2):
             for j in range(n_y - 1, n_y + 2):
-                if 0 <= i <= 20 and 0 <= j <= 20:
+                if 0 <= i <= N and 0 <= j <= N:
                     if grid[i][j] == 3:  # Looking for adjacent tree cells
                         node_name = '{x}-{y} '.format(x=str(i), y=str(j))
                         if all_nodes[node_name]['visited'] == False:  # This node is not already visited
@@ -41,7 +41,7 @@ def TreeConstruct(all_nodes, t, grid):
     #print(all_nodes)
 
 
-def caenv(config,pat,file):
+def caenv(config, path, file):
     # Initial Env Config
     ProtoEnv = gymca.prototypes[1]
     N = config['experiment']['Size']
@@ -52,9 +52,9 @@ def caenv(config,pat,file):
 
     # 1. Labeling nodes in active burning graph
     all_nodes, root_label, n_nodes = labeling()
-    # all_nodes : Dictionary of all nodes in burning graph
-    # root_label: label of burning root
-    # n_nodes: Number of nodes in Graph
+        # all_nodes : Dictionary of all nodes in burning graph
+        # root_label: label of burning root
+        # n_nodes: Number of nodes in Graph
 
     # 2. Create Tree Structure using Newick format
     # http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html
@@ -67,7 +67,7 @@ def caenv(config,pat,file):
     all_nodes[root_label]['visited'] = True  # Change status of root as visited
 
     # 4. Build Forest Structure starting in root
-    TreeConstruct(all_nodes, F, grid)
+    TreeConstruct(all_nodes, F, grid, N)
 
     # 5. Checking and Saving
     # t.write(format=1, outfile="burning_tree.nw")  # Saving Original Tree
@@ -78,13 +78,12 @@ def caenv(config,pat,file):
     env_update = 2  # Update ratio of environment respect to agent (2:1)
     time = tree_levels * env_update  # Budget Time before Tree burns entirely
     max_budget = tree_levels * env_update
-    Hash = {}  # Here, we store a Forest with specific conditions and his max value of saved trees
 
     # Dynamic Programming Algorithm
     all_nodes.pop(root_label)  # We dont want to count our fire root in algorithm
 
     # Create Additional config list due to environment differences
 
-    Config = [config['experiment']['env_type'], grid]
+    Config = [config['experiment']['env_type'], config['experiment']['env_metric'], grid]
 
-    return [agent_pos_x, agent_pos_y], all_nodes, F, time, Hash, max_budget, Config
+    return [agent_pos_x, agent_pos_y], all_nodes, F, time, max_budget, Config

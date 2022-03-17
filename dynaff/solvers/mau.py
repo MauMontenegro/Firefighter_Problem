@@ -56,12 +56,12 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
 
     saved = 0
     # Progress Bar Creation
-    if time == max_budget:
+    if recursion == 0:
         pbar = tqdm(total=len(Valid))
 
     # Traverse Valid node list and compute his value by recurrence
     for valid_node in Valid:
-        if time == max_budget:
+        if recursion == 0:
             pbar.update(1)
 
         # Copy of Tree and Valid list to send in following recurrence
@@ -72,7 +72,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         # When there are no metric distance envs, like "rndtree", we send all nodes in actual forest (except pruned)
         if config[1] == 1:
             Valid_copy = Valid.copy()
-        if config[1] == 0 :
+        if config[1] == 0:
             Valid_copy = nodes.copy()
 
         # This node will be pruned, so next iter will not ve valid(metric or no metric distances)
@@ -94,7 +94,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
             n_y = valid_node
 
         # Solve next sub-problem
-        value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, max_budget, h, config, recursion +1)
+        value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, max_budget, h, config, recursion + 1)
 
         # Fill Valid Node space by is returning best value plus is current saved trees
         Valid[valid_node]['value'] = value + saved
@@ -115,3 +115,120 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         if recursion == 0:
             return saved, h, Hash
         return saved, h
+
+
+def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+    # Control Variables
+    saved = 0
+    solution = []
+    Valid = {}
+    len_valid = 1
+    fireline=[]
+    time_travel=[]
+
+    # Loop while there are available nodes to evaluate
+    while len_valid > 0:
+        Valid.clear()
+        # Compute Feasible Nodes
+        for node in nodes:
+            if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, config):
+                Valid[node] = {}
+                Valid[node]['level'] = nodes[node]['level']
+                Valid[node]['degree'] = nodes[node]['degree']
+
+        len_valid = len(Valid)
+        if len_valid > 0:
+            # For valid Nodes Get Max Degree Value with his Key
+            max_degree = max(int(d['degree']) for d in Valid.values())
+            max_degree_node = max(Valid, key=lambda v: Valid[v]['degree'])
+            solution.append(max_degree_node)
+
+            # Remove node from actual Valid List
+            Valid.pop(max_degree_node)
+
+            # Compute Saved Nodes and detach max degree node
+            saved += utils.SavedNodes(F, max_degree_node, Valid)
+
+            # New Nodes on next iteration will Be Valid This in this
+            nodes.clear()
+            nodes = Valid.copy()
+
+            # Compute Remaining Time if agent travel to this Valid node
+            # Compute Remaining Time if agent travel to this Valid node
+            elapsed_time = utils.ComputeTime(a_pos, max_degree_node, config)
+            time -= elapsed_time
+            fireline_level = (max_budget - time) / 4
+            fireline.append(fireline_level)
+            time_travel.append(elapsed_time)
+
+            # New agent position moves to node position
+            if config[0] == "caenv":
+                x = max_degree_node.split("-")
+                a_pos[0] = int(x[0])
+                a_pos[1] = int(x[1])
+            if config[0] == "rndtree":
+                a_pos = max_degree_node
+
+    return saved, 0, [solution, time_travel, fireline]
+
+def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+    # Control Variables
+    saved = 0
+    solution = []
+    time_travel=[]
+    fireline = []
+    Valid = {}
+    len_valid = 1
+
+    # First, Compute Total Saved Trees for each node
+    utils.Compute_Total_Saved(nodes, F)
+    print(nodes)
+    # Loop while there are available nodes to evaluate
+    while len_valid > 0:
+        Valid.clear()
+        # Compute Feasible Nodes
+        for node in nodes:
+            if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, config):
+                Valid[node] = {}
+                Valid[node]['level'] = nodes[node]['level']
+                Valid[node]['degree'] = nodes[node]['degree']
+                Valid[node]['saved'] = nodes[node]['saved']
+        print(Valid)
+        len_valid = len(Valid)
+        if len_valid > 0:
+            # For valid Nodes Get Max Saved Values with his Key
+            max_saved = max(int(d['saved']) for d in Valid.values())
+            max_saved_node = max(Valid, key=lambda v: Valid[v]['saved'])
+
+            solution.append(max_saved_node)
+
+            # Remove node from actual Valid List
+            Valid.pop(max_saved_node)
+
+            # Compute Saved Nodes and detach max degree node
+            saved += max_saved
+            utils.Detach_Node_List(max_saved_node, Valid, F)
+
+            # New Nodes on next iteration will Be Valid This in this
+            nodes.clear()
+            nodes = Valid.copy()
+
+            # Update Max Saved Nodes List
+            utils.Compute_Total_Saved(nodes, F)
+
+            # Compute Remaining Time if agent travel to this Valid node
+            elapsed_time = utils.ComputeTime(a_pos, max_saved_node, config)
+            time -= elapsed_time
+            fireline_level = (max_budget - time)/4
+            fireline.append(fireline_level)
+            time_travel.append(elapsed_time)
+
+            # New agent position moves to node position
+            if config[0] == "caenv":
+                x = max_saved_node.split("-")
+                a_pos[0] = int(x[0])
+                a_pos[1] = int(x[1])
+            if config[0] == "rndtree":
+                a_pos = max_saved_node
+
+    return saved, 0, [solution, time_travel, fireline]

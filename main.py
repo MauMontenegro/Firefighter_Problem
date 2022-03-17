@@ -20,7 +20,7 @@ def labeling():
     all_nodes = {}
     root = []
     c = 0
-    with open('arbitrary_grid2') as file:
+    with open('arbitrary_grid') as file:
         reader = csv.reader(file)
         for row in reader:
             label = '{x}-{y} '.format(x=row[0], y=row[1])
@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
     # Variables
     tree_levels = max(int(d['level']) for d in all_nodes.values())
-    env_update = 2  # Update ratio of environment respect to agent (2:1)
+    env_update = 4  # Update ratio of environment respect to agent (2:1)
     time = tree_levels * env_update  # Budget Time before Tree burns entirely
     max_budget = tree_levels * env_update
     Hash = {}  # Here, we store a Forest with specific conditions and his max value of saved trees

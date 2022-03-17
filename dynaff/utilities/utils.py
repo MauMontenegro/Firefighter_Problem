@@ -50,7 +50,7 @@ def Find_Solution(Forest, Time, a_pos, Hash,config):
 
 def SavedNodes(t, cutting_node, Valid_):
     # First we get the corresponding branch of T
-    saved = 0
+    saved = 1 # As we "defend nodes" detach node is also saved
     father = t.search_nodes(name=cutting_node)[0]
 
     for node in father.iter_descendants("postorder"):
@@ -63,8 +63,29 @@ def SavedNodes(t, cutting_node, Valid_):
 
     return saved
 
+def Compute_Total_Saved(all_nodes, T):
+    for node in all_nodes:
+        saved = 1
+        father = T.search_nodes(name=node)[0]
+        for child in father.iter_descendants("postorder"):
+            saved += 1
+        all_nodes[node]['saved'] = saved
 
-def SolutionPath(Solution, init_pos):
+def Detach_Node_List(cutting_node,all_nodes,T):
+    # Search Node in T
+    father = T.search_nodes(name=cutting_node)[0]
+
+    # Traverse all his childs
+    for node in father.iter_descendants("postorder"):
+        # Detach for Valid List
+        if node.name in all_nodes:
+            all_nodes.pop(node.name)
+
+    # At the end Detach Node from Tree
+    father.detach()
+    return 0
+
+def SolutionPath( Solution, init_pos):
     a_x = init_pos[0]
     a_y = init_pos[1]
     # print("Initial agent pos:{p}".format(p=[a_x, a_y]))

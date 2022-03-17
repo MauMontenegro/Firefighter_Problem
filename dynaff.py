@@ -3,14 +3,14 @@ import sys
 from dynaff import setupExperiment, getExpConfig
 from dynaff.utilities import utils
 import numpy as np
+from matplotlib import pyplot as plt
+import gym_cellular_automata as gymca
 import json
 
 # Performance Measures
 import tracemalloc
 import time as tm
 import os
-
-
 
 class ExperimentLog:
     def __init__(self, path, file_name):
@@ -66,13 +66,8 @@ def argParser(args):
 
     return parser.parse_known_args(args)[0]
 
-
-class Initial_pos:
-    pass
-
-
 if __name__ == '__main__':
-    # Get Arguments
+    # Get Input Arguments
     args = argParser(sys.argv[:])
 
     # Retrieve Experiment Configuration yaml file
@@ -81,14 +76,16 @@ if __name__ == '__main__':
     # Get Solver Function and Input Manager Function
     input_manager, solver = setupExperiment(args.input, args.solver)
 
-    # Experiment Directory and create logger for store results
+    # Experiment Directory and create logger for storing results
     path = str(args.input) + '/' + str(args.solver) + '/' + str(exp_config['experiment']['Seed'])
     file = str(exp_config['experiment']['Size']) + '-' + str(exp_config['experiment']['Initial_pos']) + '-' + str(exp_config['experiment'][
         'Env_Update'])
 
     logger = ExperimentLog(path, file)
-    input = input_manager(exp_config,path,file)
-    print(input)
+
+    # Get Input for Selected Solver and config File.
+    input = input_manager(exp_config, path, file)
+
     # Get Input Variables
     agent_pox_x = input[0][0]
     agent_pox_y = input[0][1]
@@ -109,7 +106,8 @@ if __name__ == '__main__':
     # Call The solver
     tracing_start()
     start = tm.time()
-    max_saved_trees, Hash_Calls, Hash = solver([agent_pox_x, agent_pox_y], nodes, Forest, time, max_budget, 0, config,0)
+    print(Forest.get_ascii(show_internal=True))  # Printing Tree Structure
+    max_saved_trees, Hash_Calls, Sol = solver([agent_pox_x, agent_pox_y], nodes, Forest, time, max_budget, 0, config,0)
     end = tm.time()
     print("time elapsed {} milli seconds".format((end - start) * 1000))
     peak = tracing_mem()
@@ -120,20 +118,54 @@ if __name__ == '__main__':
     print("\nForest with:{n} nodes".format(n=len(nodes)))
     print("\nMax saved Trees:{t}".format(t=max_saved_trees))
     print("\nHash Repeated Calls:{h}".format(h=Hash_Calls))
-    print("Hash Table has {l} different Forest Conditions".format(l=len(Hash)))
+    print("Hash Table has {l} different Forest Conditions".format(l=len(Sol)))
 
     # Construct Solution from Hash Table
-    Solution = utils.Find_Solution(Forest, time, [agent_pox_x, agent_pox_y], Hash, config)
-    print("\nSolution: {s}".format(s=Solution))
+    if args.solver== "dpsolver_mau":
+        Solution = utils.Find_Solution(Forest, time, [agent_pox_x, agent_pox_y], Sol, config)
+        print("\nSolution: {s}".format(s=Solution))
+    if args.solver == "hd_heuristic" or args.solver== "ms_heuristic":
+        print(config[2])
+        print("\nSolution: {s}".format(s=Sol[0]))
+        print("\nSolution Times: {s}".format(s=Sol[1]))
+        print("\nFireline Level: {s}".format(s=Sol[2]))
 
-    sol_stats = [Solution, max_saved_trees, Hash, Hash_Calls]
 
-    stats['sol'] = Solution
+    stats['sol'] = Sol
     stats['max_sav_trees'] = max_saved_trees
     stats['hash_calls'] = Hash_Calls
 
     logger.log_save(stats)
 
-    # Build Path of actions that agent must follow considering DP Solution
-    # Sol_Path = SolutionPath(Solution, input[0])
-    # print("\nPath Solution of actions:\n{p}".format(p=Sol_Path))
+    if exp_config['experiment']['env_type'] == "caenv":
+        ProtoEnv = gymca.prototypes[1]
+        N = exp_config['experiment']['Size']
+        env = ProtoEnv(nrows=N, ncols=N)
+        obs = env.reset()
+
+        # Build Path of actions that agent must follow considering DP Solution
+        Sol_Path = utils.SolutionPath(Solution, agent_pos)
+        print("\nPath Solution of actions:\n{p}".format(p=Sol_Path))
+
+        total_reward = 0.0
+        done = False
+        step = 0
+        threshold = 60
+
+        while not done and step < threshold:
+            #fig = env.render(mode="rgb_array")
+            #fig.savefig('Images/Emulation_{f}.png'.format(f=step))
+            #plt.close()
+            # Follow Solution Path until empty.
+            if len(Sol_Path) > 0:
+                action = Sol_Path[0]
+                Sol_Path.pop(0)
+            else:
+                action = [4, 0]
+            # print(action)
+            obs, reward, done, info = env.step(action)
+            total_reward += reward
+            step += 1
+
+        print(f"Total Steps: {step}")
+        print(f"Total Reward: {total_reward}")

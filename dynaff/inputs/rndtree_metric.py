@@ -1,5 +1,5 @@
 import networkx as nx
-import random
+import random as rnd
 import numpy as np
 from ete3 import Tree
 import matplotlib.pyplot as plt
@@ -7,19 +7,24 @@ from sklearn.manifold import SpectralEmbedding
 
 def TreeConstruct(F, all_nodes, Tree):
     levels = nx.single_source_shortest_path_length(Tree, 0)
+    degrees = list(Tree.degree)
     max_level = max(levels.values())
     edges = list(nx.bfs_edges(Tree, source=0))
 
     # Add root
     F.add_child(name=str(0))
-    all_nodes[0] = {}
-    all_nodes[0]['level'] = levels[0]
+    all_nodes[str(0)] = {}
+    all_nodes[str(0)]['level'] = levels[0]
+
     for edge in edges:
         all_nodes[str(edge[1])] = {}
         all_nodes[str(edge[1])]['level'] = levels[edge[1]]
         father = F.search_nodes(name=str(edge[0]))[0]
         child = str(edge[1])
         father.add_child(name=child)
+    print(all_nodes)
+    for degree in degrees:
+        all_nodes[str(degree[0])]['degree'] = degree[1]
 
     return F, all_nodes, max_level
 
@@ -27,40 +32,27 @@ def TreeConstruct(F, all_nodes, Tree):
 def rndtree_metric(config, path, file):
     N = config['experiment']['Size']  # Number of Nodes
     seed = config['experiment']['Seed']  # Experiment Seed
-    # Create a Random Graph with N nodes
-    G = nx.gnp_random_graph(n=N, p=0.4, seed=seed)
 
-    # Create Random Integer Edges Between nodes (No metric Distance)
-    for (u, v, w) in G.edges(data=True):
-        w['weight'] = random.randint(config['experiment']['wr_l'], config['experiment']['wr_u'])
+    # Create a Random Tree (nx use a Prufer Sequence) and get pos layout of nodes
+    T = nx.random_tree(n=N, seed=seed)
+    pos = nx.spring_layout(T)
 
-    # Getting Adjacency Matrix from G
-    A = nx.to_numpy_array(G)
-
-    # Make an Embedding in Plane with metric distances between nodes.
-    embedding = SpectralEmbedding(n_components=2)
-    Emb = embedding.fit_transform(A)
-
-    # Construct New Adjacency From Embedding (Metric Edge values)
-    A_Emb = np.zeros((N, N))
+    T_Ad = np.zeros((N, N))
     for row in range(0, N):
         for column in range(row, N):
             if row == column:
-                A_Emb[row][column] = 0
+                T_Ad[row][column] = 0
             else:
-                A_Emb[row][column] = np.linalg.norm(Emb[row] - Emb[column]) * 10
+                dist = np.sqrt((pos[row][0] - pos[column][0]) ** 2 + (pos[row][1] - pos[column][1]) ** 2)
+                T_Ad[row][column] = dist * 10
 
     # Create a Symmetric Matrix with upper part of A_Emb (For symmetric distances)
-    A_Emb = np.triu(A_Emb) + np.tril(A_Emb.T)
+    T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)
 
-    # Induce a Tree using BFS on G
-    BFS_Tree = nx.minimum_spanning_tree(G)  # Create Random Tree
     all_nodes = {}  # List of All Nodes
 
     # Seed for reproducible layout
-    pos = nx.spring_layout(BFS_Tree, seed=seed)
-    labels = nx.get_edge_attributes(BFS_Tree, 'weight')
-    nx.draw(BFS_Tree, pos, with_labels=True)
+    nx.draw(T, pos, with_labels=True)
 
     # Saving Graph Image
     file_path = path + file + '.png'
@@ -70,7 +62,7 @@ def rndtree_metric(config, path, file):
     F = Tree()  # Initialize a Forest. Tree() is a func in ete3 with Newick format.
 
     # Construct Tree structure
-    F, all_nodes, max_level = TreeConstruct(F, all_nodes, BFS_Tree)
+    F, all_nodes, max_level = TreeConstruct(F, all_nodes, T)
 
     # Variables
     env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
@@ -81,6 +73,6 @@ def rndtree_metric(config, path, file):
     initial_pos = config['experiment']['Initial_pos']
 
     # Create Additional config array due to environment differences
-    Config = [config['experiment']['env_type'], config['experiment']['env_metric'], A_Emb]
+    Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
 
     return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config
