@@ -34,7 +34,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
     h = hash_calls
 
     # Base Conditions(Tree is empty or time is over)
-    if F.is_leaf() == True or time == 0:
+    if F.is_leaf() == True or time <= 0:
         return 0, h
 
     # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
@@ -123,8 +123,8 @@ def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
     solution = []
     Valid = {}
     len_valid = 1
-    fireline=[]
-    time_travel=[]
+    fireline = []
+    time_travel = []
 
     # Loop while there are available nodes to evaluate
     while len_valid > 0:

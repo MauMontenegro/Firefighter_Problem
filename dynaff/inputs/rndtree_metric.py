@@ -29,13 +29,13 @@ def TreeConstruct(F, all_nodes, Tree):
     return F, all_nodes, max_level
 
 
-def rndtree_metric(config, path, file):
-    N = config['experiment']['Size']  # Number of Nodes
+def rndtree_metric(config, path, file, n_nodes):
+    N = n_nodes  # Number of Nodes
     seed = config['experiment']['Seed']  # Experiment Seed
 
     # Create a Random Tree (nx use a Prufer Sequence) and get pos layout of nodes
     T = nx.random_tree(n=N, seed=seed)
-    pos = nx.spring_layout(T)
+    pos = nx.spring_layout(T, seed=seed)
 
     T_Ad = np.zeros((N, N))
     for row in range(0, N):
@@ -43,7 +43,11 @@ def rndtree_metric(config, path, file):
             if row == column:
                 T_Ad[row][column] = 0
             else:
-                dist = np.sqrt((pos[row][0] - pos[column][0]) ** 2 + (pos[row][1] - pos[column][1]) ** 2)
+                x_1 = pos[row][0]
+                x_2 = pos[column][0]
+                y_1 = pos[row][1]
+                y_2 = pos[column][1]
+                dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
                 T_Ad[row][column] = dist * 10
 
     # Create a Symmetric Matrix with upper part of A_Emb (For symmetric distances)
@@ -57,6 +61,7 @@ def rndtree_metric(config, path, file):
     # Saving Graph Image
     file_path = path + file + '.png'
     plt.savefig(file_path, format="PNG")
+    plt.close()
 
     # Initialize Tree Structure using ete3
     F = Tree()  # Initialize a Forest. Tree() is a func in ete3 with Newick format.
