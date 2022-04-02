@@ -12,6 +12,7 @@ import tracemalloc
 import time as tm
 import os
 
+
 class ExperimentLog:
     def __init__(self, path, file_name):
         self.path = path
@@ -66,6 +67,7 @@ def argParser(args):
 
     return parser.parse_known_args(args)[0]
 
+
 if __name__ == '__main__':
     # Get Input Arguments
     args = argParser(sys.argv[:])
@@ -76,6 +78,7 @@ if __name__ == '__main__':
     # Get Solver Function and Input Manager Function
     input_manager, solver = setupExperiment(args.input, args.solver)
 
+    # Node Sizes for different experiments
     n_nodes_grid = exp_config['experiment']['Size']
     saved_p_nodes = []
 
@@ -89,6 +92,7 @@ if __name__ == '__main__':
                str(exp_config['experiment']['Initial_pos']) + '-' + \
                str(exp_config['experiment']['Env_Update'])
 
+        # Create Logger Class
         logger = ExperimentLog(path, file)
 
         # Get Input for Selected Solver and config File.
@@ -103,19 +107,21 @@ if __name__ == '__main__':
         time = input[3]
         max_budget = input[4]
         config = input[5]
+        plotting = input[6]
 
-        stats={}
+
+        stats = {}
         stats['env_type'] = exp_config['experiment']['env_type']
-        stats['init_pos'] = int(agent_pos_x),int(agent_pos_y)
+        stats['init_pos'] = int(agent_pos_x), int(agent_pos_y)
         stats['seed'] = exp_config['experiment']['Seed']
         stats['max_budget'] = max_budget
-
 
         # Call The solver
         tracing_start()
         start = tm.time()
         print(Forest.get_ascii(show_internal=True))  # Printing Tree Structure
-        max_saved_trees, Hash_Calls, Sol = solver([agent_pos_x, agent_pos_y], nodes, Forest, time, max_budget, 0, config,0)
+        max_saved_trees, Hash_Calls, Sol = solver([agent_pos_x, agent_pos_y], nodes, Forest, time, max_budget, 0,
+                                                  config, 0)
         end = tm.time()
         print("time elapsed {} milli seconds".format((end - start) * 1000))
         peak = tracing_mem()
@@ -131,15 +137,14 @@ if __name__ == '__main__':
         print("Hash Table has {l} different Forest Conditions".format(l=len(Sol)))
 
         # Construct Solution from Hash Table
-        if args.solver== "dpsolver_mau":
-            Solution = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y], Sol, config)
+        if args.solver == "dpsolver_mau":
+            Solution = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y], Sol, config, plotting, exp_config['experiment']['Env_Update'] )
             print("\nSolution: {s}".format(s=Solution))
-        if args.solver == "hd_heuristic" or args.solver== "ms_heuristic":
+        if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
             print(config[2])
             print("\nSolution: {s}".format(s=Sol[0]))
             print("\nSolution Times: {s}".format(s=Sol[1]))
             print("\nFireline Level: {s}".format(s=Sol[2]))
-
 
         stats['sol'] = Sol
         stats['max_sav_trees'] = max_saved_trees
@@ -163,9 +168,9 @@ if __name__ == '__main__':
             threshold = 60
 
             while not done and step < threshold:
-                #fig = env.render(mode="rgb_array")
-                #fig.savefig('Images/Emulation_{f}.png'.format(f=step))
-                #plt.close()
+                # fig = env.render(mode="rgb_array")
+                # fig.savefig('Images/Emulation_{f}.png'.format(f=step))
+                # plt.close()
                 # Follow Solution Path until empty.
                 if len(Sol_Path) > 0:
                     action = Sol_Path[0]
@@ -182,7 +187,6 @@ if __name__ == '__main__':
 
     nodes = np.array(exp_config['experiment']['Size'])
     print(saved_p_nodes)
-    plt.plot(nodes,saved_p_nodes)
+    plt.plot(nodes, saved_p_nodes)
     plt.savefig(args.solver, format="PNG")
     plt.close()
-

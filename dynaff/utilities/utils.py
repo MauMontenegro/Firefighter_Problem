@@ -1,3 +1,8 @@
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
 def ComputeTime(a_pos, node_pos, config):
     delta_time = 0
     if config[0] == "caenv":
@@ -10,27 +15,71 @@ def ComputeTime(a_pos, node_pos, config):
         delta_time = Adj[int(node_pos)][int(a_pos[0])]
     return delta_time
 
-def DetachNode(t, cutting_node):
-    saved = 0
+def DetachNode(t, cutting_node, levels,saved_nodes):
+    saved = 1
     father = t.search_nodes(name=cutting_node)[0]
     for node in father.iter_descendants("postorder"):
         saved += 1
+        levels.pop(int(node.name))
+        saved_nodes.append(int(node.name))
     father.detach()
     return saved
 
-def Find_Solution(Forest, Time, a_pos, Hash,config):
+def Find_Solution(Forest, Time, a_pos, Hash, config, plotting,update):
     # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
+    frame = 0
+    total_budget = Time
+    spread_time = update
+    last_level_burnt = 0
+    elapsed=0
+
     key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
+    graphSolution(plotting,frame)
     Solution = []
     while Hash[key]['value'] != 0:
+        frame += 1
         # Getting node of max value
+        print('Times to all nodes:')
+        print(config[2][plotting[4],:])
         node = Hash[key]['max_node']
-        #print("Node:{n}".format(n=node))
-        # Saved Trees by selecting this node
-        saved = DetachNode(Forest, node)
-        print("Value of Node:{v}".format(v=saved))
+        print('Saved node:')
+        print(node)
+
         # Computes Remaining Time if agent travel to this node
-        Time = Time - ComputeTime(a_pos, node,config)
+        Time = Time - ComputeTime(a_pos, node, config)
+        elapsed += (total_budget-Time)
+
+        all_levels = plotting[6]
+        levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
+        print('Levels to Burnt')
+        print(levels_to_burnt)
+        for level in range(last_level_burnt+1,(last_level_burnt + levels_to_burnt)+1):
+            print('Level')
+            print(level)
+            keys = [k for k, v in all_levels.items() if v <= level]
+            print('Keys')
+            print(keys)
+            # Assign to burning nodes and quit from remaining
+            for element in keys:
+                if element not in plotting[2]:
+                    plotting[2].append(element)
+                if element in plotting[3]:
+                    plotting[3].remove(element)
+            graphSolution(plotting, frame, 0, level, spread_time*level)
+            frame += 1
+
+        # Change pos of agent to next node in solution
+        pos = plotting[1]
+
+        pos[plotting[4]] = pos[int(node)]
+        plotting[1] = pos
+        # Saved Trees by selecting this node
+        saved = DetachNode(Forest, node, plotting[6], plotting[7])
+
+        last_level_burnt += levels_to_burnt
+        # Add saved Node
+        plotting[7].append(int(node))
+
         # New agent position moves to node position
         if config[0] == "caenv":
             x = node.split("-")
@@ -42,10 +91,55 @@ def Find_Solution(Forest, Time, a_pos, Hash,config):
             a_pos[1] = node
             Solution.append(node)
         # New Key
+        graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
+        total_budget = Time
         key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
-        # print(Forest.get_ascii(show_internal=True))
+
 
     return Solution
+
+
+def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elapsed=0):
+    Tree = plot_config[0]
+    pos = plot_config[1]
+    burnt_nodes = plot_config[2]
+    remaining_nodes = plot_config[3]
+    agent_pos = plot_config[4]
+    path = plot_config[5]
+    saved_nodes= plot_config[7]
+
+    # This is for get max and min labels in plotting
+    max_x_value = max(d[0] for d in pos.values())
+    min_x_value = min(d[0] for d in pos.values())
+    max_y_value = max(d[1] for d in pos.values())
+    min_y_value = min(d[1] for d in pos.values())
+
+    # Nodes
+    options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 1}
+    nx.draw_networkx_nodes(Tree, pos, nodelist=burnt_nodes, node_color="tab:red", **options)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=remaining_nodes, node_color="tab:green", **options)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=saved_nodes, node_color="tab:blue", **options)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=[agent_pos], node_color="tab:gray", **options)
+
+    # Edges
+    nx.draw_networkx_edges(Tree, pos, width=2.0, alpha=0.9)
+    plt.xticks(np.arange(min_x_value, max_x_value, 1))
+    plt.yticks(np.arange(min_y_value, max_y_value, 1))
+    plt.xlabel('X-Position', fontdict=None, labelpad=20)
+    plt.ylabel('Y-Position', fontdict=None, labelpad=20)
+
+    scal=10
+    plt.text(scal*-.8, scal*-1.3,"Travel time: {0:.2f}".format(spend_time))
+    plt.text(scal*-.8, scal*-1.4, "Burned Levels: {l}".format(l=burned_levels))
+    plt.text(scal*-.8, scal*-1.5, "Total elapsed Time: {0:.2f}".format(total_elapsed))
+
+    graph = plt.gcf()
+    frame = str(frame_num)
+    full_path = path + "/"
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+    graph.savefig(full_path + 'frame_' + frame, format="PNG")
+    plt.close()
 
 
 def SavedNodes(t, cutting_node, Valid_):

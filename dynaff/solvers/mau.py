@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 def Feasible(node_pos, a_pos, time, level, max_budget, config):
     # Compute Ticks to reach node_pos from root
-    t_node = level * 4
+    t_node = level * 2
     # Compute elapsed ticks
     e_time = max_budget - time
     # Compute ticks from agent to node_pos
@@ -157,7 +157,7 @@ def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
             # Compute Remaining Time if agent travel to this Valid node
             elapsed_time = utils.ComputeTime(a_pos, max_degree_node, config)
             time -= elapsed_time
-            fireline_level = (max_budget - time) / 4
+            fireline_level = (max_budget - time) / 2
             fireline.append(fireline_level)
             time_travel.append(elapsed_time)
 
@@ -219,7 +219,7 @@ def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
             # Compute Remaining Time if agent travel to this Valid node
             elapsed_time = utils.ComputeTime(a_pos, max_saved_node, config)
             time -= elapsed_time
-            fireline_level = (max_budget - time)/4
+            fireline_level = (max_budget - time)/2
             fireline.append(fireline_level)
             time_travel.append(elapsed_time)
 

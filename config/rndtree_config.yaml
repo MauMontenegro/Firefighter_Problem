@@ -3,8 +3,8 @@ experiment:
   env_metric: 1       # 1 for metric distances or 0 for non-metric
   Seed: 410           # Seed for reproducibility
   Runs: 10            # How many Runs per Tree
-  Size: [35,40,45]            # Number of Nodes
+  Size: [20]          # Number of Nodes
   Initial_pos: 8      # Initial Agent Node Position
-  Env_Update: 4       # Environment Update Ticks
-  wr_l: 1             # Weight Lower Range in edges
+  Env_Update: 2       # Environment Update Ticks
+  wr_l: 1            # Weight Lower Range in edges
   wr_u: 20           # Weight Upper Range in edges
