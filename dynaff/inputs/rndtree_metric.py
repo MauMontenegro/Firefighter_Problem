@@ -47,6 +47,7 @@ def rndtree_metric(config, path, file, n_nodes):
     T = nx.random_tree(n=N, seed=seed)
     # Could use spring or spectral Layout
     pos = nx.spring_layout(T, seed=seed)
+    nx.write_adjlist(T, "AdjList.adjlist")
 
     T_Ad = np.zeros((N + 1, N + 1))
 
@@ -132,6 +133,10 @@ def rndtree_metric(config, path, file, n_nodes):
     print(time)
     # Choose Initial Position of Agent
     initial_pos = N
+
+    #Saving Full Distance Matrix
+    f = open("Full_Matrix.txt", "w")
+    f.write(str(T_Ad_Sym))
 
     # Create Additional config array due to environment differences
     Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]

@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 def Feasible(node_pos, a_pos, time, level, max_budget, config):
     # Compute Ticks to reach node_pos from root
-    t_node = level * 2
+    t_node = level * 1
     # Compute elapsed ticks
     e_time = max_budget - time
     # Compute ticks from agent to node_pos

@@ -146,7 +146,7 @@ if __name__ == '__main__':
             print("\nSolution Times: {s}".format(s=Sol[1]))
             print("\nFireline Level: {s}".format(s=Sol[2]))
 
-        stats['sol'] = Sol
+        stats['sol'] = Solution
         stats['max_sav_trees'] = max_saved_trees
         stats['hash_calls'] = Hash_Calls
 
