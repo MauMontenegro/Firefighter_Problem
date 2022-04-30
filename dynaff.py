@@ -152,6 +152,8 @@ if __name__ == '__main__':
 
         logger.log_save(stats)
 
+
+
         if exp_config['experiment']['env_type'] == "caenv":
             ProtoEnv = gymca.prototypes[1]
             N = exp_config['experiment']['Size']
@@ -186,6 +188,7 @@ if __name__ == '__main__':
             print(f"Total Reward: {total_reward}")
 
     nodes = np.array(exp_config['experiment']['Size'])
+    print("Saved Trees")
     print(saved_p_nodes)
     plt.plot(nodes, saved_p_nodes)
     plt.savefig(args.solver, format="PNG")

@@ -3,7 +3,21 @@ import random as rnd
 import numpy as np
 from ete3 import Tree
 import matplotlib.pyplot as plt
+import json
+import os
 
+class ExperimentLog:
+    def __init__(self, path, file_name):
+        self.path = path
+        self.file = file_name + '.json'
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+
+        self.full_path = os.path.join(self.path, self.file)
+
+    def log_save(self, stats):
+        with open(self.full_path, 'w') as fp:
+            json.dump(stats, fp)
 
 def TreeConstruct(F, all_nodes, Tree, root):
     levels = nx.single_source_shortest_path_length(Tree, root)
@@ -33,7 +47,7 @@ def TreeConstruct(F, all_nodes, Tree, root):
 def rndtree_metric(config, path, file, n_nodes):
     N = n_nodes  # Number of Nodes
     seed = config['experiment']['Seed']  # Experiment Seed
-    scale = 10
+    scale = 1
     starting_fire = rnd.randint(0, N - 1)
 
     print('Starting fire in Node:')
@@ -81,10 +95,11 @@ def rndtree_metric(config, path, file, n_nodes):
     # Create a Symmetric Matrix with upper part of T_Ad (For symmetric distances)
     T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)
 
-    # Add Agent Node to Tree and add his scalated position
+    # Add Agent Node to Tree and add his escalated position
     T.add_node(N)
     pos[N] = [a_x_pos, a_y_pos]
-
+    print("Posee")
+    print(pos[N])
     all_nodes = {}  # List of All Nodes
 
     # Draw and saving Graph
@@ -134,13 +149,39 @@ def rndtree_metric(config, path, file, n_nodes):
     # Choose Initial Position of Agent
     initial_pos = N
 
+    # Create Logger Class
+    logger = ExperimentLog('instance', 'instance_info')
+
     #Saving Full Distance Matrix
-    f = open("Full_Matrix.txt", "w")
-    f.write(str(T_Ad_Sym))
+    nx.write_adjlist(T, "instance/MFF_Tree.adjlist")
+
+    # Saving Numpy array full distance matrix
+    np.save("instance/FDM_MFFP.npy", T_Ad_Sym)
+
+    # Saving Instance Parameters
+    instance = {}
+    instance['N'] = N
+    instance['seed'] = seed
+    instance['scale'] = scale
+    instance['start_fire'] = starting_fire
+    instance['a_pos_x'] = a_x_pos
+    instance['a_pos_y'] = a_y_pos    # Saving Layout in to a json file
+
+    for element in pos:
+        pos[element] = list(pos[element])
+
+    # Saving pos layout
+    with open('instance/layout_MFF.json', 'w') as layout_file:
+        layout_file.write(json.dumps(pos))
+
+    logger.log_save(instance)
+
+    print(T_Ad_Sym)
 
     # Create Additional config array due to environment differences
     Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
 
     Plotting = [T, pos, burnt_nodes, remaining_nodes, N, path + file + '/', levels, saved_nodes]
 
+    print(pos)
     return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config, Plotting
