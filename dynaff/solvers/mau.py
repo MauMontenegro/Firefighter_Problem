@@ -3,6 +3,19 @@ from tqdm import tqdm
 
 
 def Feasible(node_pos, a_pos, time, level, max_budget, config):
+    """Function that decides if node is Feasible by comparing agent travel time to a node and fire travel time
+     to same node
+
+    :param node_pos: Int Node name
+    :param a_pos: Real agent position
+    :param time: Real Remaining time
+    :param level: Int Node level
+    :param max_budget: Real Max initial budget time
+    :param config:
+    :return: Bool
+        True if node is feasible and False if not
+    """
+
     # Compute Ticks to reach node_pos from root
     t_node = level * 1
     # Compute elapsed ticks
@@ -25,30 +38,37 @@ Hash = {}
 
 def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
     """ Wise-Recursive Dynamic Programming Solver for Moving Firefighter Problem
-    :param a_pos:
-    :param nodes:
-    :param F:
-    :param time:
-    :param max_budget:
-    :param hash_calls:
-    :param config:
-    :param recursion:
+
+    Recursive Dynamic Programming function. It takes a Forest in ete3 form and construct a key with the state of the
+    Forest (remaining_time, agent position and remaining nodes that are not already burning or defended) and store in
+    a Hash table. Function computes feasible nodes due current state and for each feasible node call the recurrence
+    computing saved nodes until arrive a 'Base Case' and start to go back with Values. At the end we will have a Hash
+    Table with state as key along with his optimal 'next_node-value'. Wise part is for only store in Hash states that
+    currently happens, cause due to fire dynamics some states will never arise. So, memoization will be most
+    time-consuming with a little benefit.
+
+    :param a_pos: Real vector containing x_position and y_position for the agent
+    :param nodes: Dictionary containing all nodes with degree and level
+    :param F: Forest in ete3 form
+    :param time: Real Remaining time until forest consumption
+    :param max_budget: Real Initial max-budget time
+    :param hash_calls: Int Number of times Hash Table has the key we are evaluating
+    :param config: Additional information for different inputs (like Adjacency matrix)
+    :param recursion: Number of times recursion is called
     :return:
+        Saved Nodes for state evaluation
+        Actual recursion
+        Hash Table
     """
-    # F is the actual Forest
-    # a_pos is the actual agent position
-    # Remaining time
-    # node list in the Forest
-    # hash_calls track valid hash calls
-    # ------------------------------------------
 
     h = hash_calls
 
-    # Base Conditions(Tree is empty or time is over)
-    if F.is_leaf() == True or time <= 0:
+    # Base Conditions of recursion (Tree is empty or time is over)
+    if (F.is_leaf() == True) or (time <= 0):
         return 0, h
 
-    # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
+    # Construct the Key to store in Hash
+    # String: " Forest_newick; remaining_time; pos_x, pos_y "
     key = F.write(format=8) + ';' + str(time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
 
     # Search if we already see this Forest Conditions. If not, create new key entry
@@ -66,6 +86,8 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
             Valid[node]['level'] = nodes[node]['level']
 
     saved = 0
+    pbar = 0
+
     # Progress Bar Creation
     if recursion == 0:
         pbar = tqdm(total=len(Valid))
@@ -78,7 +100,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         # Copy of Tree and Valid list to send in following recurrence
         F_copy = F.copy("newick")
 
-        # In metric distance envs like "caenv", only send to the following recurrence a copy of valid
+        # In metric distance envs like "caenv", only send to the following recurrence a copy of 'Valid'
         # cause once a node is invalid due delta_time from agent position it never will be valid again.
         # When there are no metric distance envs, like "rndtree", we send all nodes in actual forest (except pruned)
         if config[1] == 1:
@@ -107,7 +129,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         # Solve next sub-problem
         value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, max_budget, h, config, recursion + 1)
 
-        # Fill Valid Node space by is returning best value plus is current saved trees
+        # Assign Valid Node value by his returning best value + is current saved trees
         Valid[valid_node]['value'] = value + saved
 
     # Once all valid nodes values are computed then calculate the best (max) and store in current key
@@ -117,7 +139,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         max_key_node = max(Valid, key=lambda v: Valid[v]['value'])
         Hash[key]['max_node'] = max_key_node
         Hash[key]['value'] = max_value
-        if recursion == 0:
+        if recursion == 0:             # We already do all the recursions
             return max_value, h, Hash
         return max_value, h
     # If there are no valid nodes for current key then only return saved trees
@@ -129,6 +151,18 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
 
 
 def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+    """Heuristic that saves feasible nodes with maximum degree
+
+    :param a_pos:
+    :param nodes:
+    :param F:
+    :param time:
+    :param max_budget:
+    :param hash_calls:
+    :param config:
+    :param recursion:
+    :return:
+    """
     # Control Variables
     saved = 0
     solution = []
@@ -184,6 +218,18 @@ def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
 
 
 def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+    """Heuristic that saves nodes with maximum children
+
+    :param a_pos:
+    :param nodes:
+    :param F:
+    :param time:
+    :param max_budget:
+    :param hash_calls:
+    :param config:
+    :param recursion:
+    :return:
+    """
     # Control Variables
     saved = 0
     solution = []

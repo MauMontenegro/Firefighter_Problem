@@ -132,10 +132,10 @@ if __name__ == '__main__':
             print("Time elapsed by step: {s}".format(s=Solution_times))
             print("Total Elapsed time by step: {s}".format(s=Solution_elapsed))
         if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
-            print(config[2])
             print("\nSolution: {s}".format(s=Sol[0]))
             print("\nTime elapsed by step: {s}".format(s=Sol[1]))
             print("\nFireline Level: {s}".format(s=Sol[2]))
+            utils.graphSol(Sol,plotting)
 
         # Saving stats for general parameters
         stats = {}

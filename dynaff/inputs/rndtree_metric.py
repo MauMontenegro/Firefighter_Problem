@@ -78,7 +78,7 @@ def TreeConstruct(F, all_nodes, Tree, root):
 
     degrees.pop(-1)                                             # Pop agent position, as this is not on original graph.
     # Add degree for each node in his dictionary
-    # (This will be the weight for each node)
+    # (This will help us in some heuristics)
     for degree in degrees:
         all_nodes[str(degree[0])]['degree'] = degree[1]
 
