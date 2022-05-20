@@ -1,7 +1,5 @@
 import argparse
 import sys
-from dynaff import setupExperiment, getExpConfig
-from dynaff.utilities import utils
 import numpy as np
 from matplotlib import pyplot as plt
 import gym_cellular_automata as gymca
@@ -11,6 +9,9 @@ import json
 import tracemalloc
 import time as tm
 import os
+
+from dynaff import setupExperiment, getExpConfig
+from dynaff.utilities import utils
 
 
 class ExperimentLog:
@@ -42,8 +43,6 @@ def tracing_mem():
     return peak
 
 
-# -------------------------------------------------------------
-
 def argParser(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -69,7 +68,7 @@ def argParser(args):
 
 
 if __name__ == '__main__':
-    # Get Input Arguments
+    # Get input arguments for input_instance_type, solver and config_file
     args = argParser(sys.argv[:])
 
     # Retrieve Experiment Configuration yaml file
@@ -78,27 +77,22 @@ if __name__ == '__main__':
     # Get Solver Function and Input Manager Function
     input_manager, solver = setupExperiment(args.input, args.solver)
 
-    # Node Sizes for different experiments
+    # Graph Size for different experiments
     n_nodes_grid = exp_config['experiment']['Size']
     saved_p_nodes = []
 
-    # Experiments for every Node Size
+    # Experiments for every Graph
     for n_nodes in n_nodes_grid:
-        # Experiment Directory and create logger for storing results
+        # Experiment Directory and create logger for store results
         path = str(args.input) + '/' + str(args.solver) + '/'
-
         file = str(exp_config['experiment']['Seed']) + '-' + \
                str(n_nodes) + '-' + \
-               str(exp_config['experiment']['Initial_pos']) + '-' + \
                str(exp_config['experiment']['Env_Update'])
 
-        # Create Logger Class
         logger = ExperimentLog(path, file)
 
-        # Get Input for Selected Solver and config File.
+        # Get Instance for Selected Solver and config File.
         input = input_manager(exp_config, path, file, n_nodes)
-
-        # Get Input Variables
         agent_pos_x = input[0][0]
         agent_pos_y = input[0][1]
         agent_pos = agent_pos_x, agent_pos_y
@@ -109,50 +103,57 @@ if __name__ == '__main__':
         config = input[5]
         plotting = input[6]
 
+        # Call The solver
+        # ----------------------------------------------------------------------------------------------------------
+        tracing_start()
+        start = tm.time()
+        max_saved_trees, Hash_Calls, Sol = solver([agent_pos_x, agent_pos_y], nodes, Forest, time, max_budget, 0,
+                                                  config, 0)
+        end = tm.time()
+        print("time elapsed {} milli seconds".format((end - start) * 1000))
+        peak = tracing_mem()
+        # -----------------------------------------------------------------------------------------------------------
 
+        # Saved nodes per Graph
+        saved_p_nodes.append(max_saved_trees)
+
+        # Just Printing Results
+        print("\nForest with:{n} nodes".format(n=len(nodes)))
+        print("\nMax saved Trees:{t}".format(t=max_saved_trees))
+        print("\nHash Repeated Calls:{h}".format(h=Hash_Calls))
+        print("Hash Table has {l} different Forest Conditions".format(l=len(Sol)))
+
+        # Retrieve Solution Strategy
+        if args.solver == "dpsolver_mau":
+            Solution, Solution_times, Solution_elapsed = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y],
+                                                                             Sol, config, plotting,
+                                                                             exp_config['experiment']['Env_Update'])
+            print("\nSolution: {s}".format(s=Solution))
+            print("Time elapsed by step: {s}".format(s=Solution_times))
+            print("Total Elapsed time by step: {s}".format(s=Solution_elapsed))
+        if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
+            print(config[2])
+            print("\nSolution: {s}".format(s=Sol[0]))
+            print("\nTime elapsed by step: {s}".format(s=Sol[1]))
+            print("\nFireline Level: {s}".format(s=Sol[2]))
+
+        # Saving stats for general parameters
         stats = {}
         stats['env_type'] = exp_config['experiment']['env_type']
         stats['init_pos'] = int(agent_pos_x), int(agent_pos_y)
         stats['seed'] = exp_config['experiment']['Seed']
         stats['max_budget'] = max_budget
 
-        # Call The solver
-        tracing_start()
-        start = tm.time()
-        print(Forest.get_ascii(show_internal=True))  # Printing Tree Structure
-        max_saved_trees, Hash_Calls, Sol = solver([agent_pos_x, agent_pos_y], nodes, Forest, time, max_budget, 0,
-                                                  config, 0)
-        end = tm.time()
-        print("time elapsed {} milli seconds".format((end - start) * 1000))
-        peak = tracing_mem()
-
-        saved_p_nodes.append(max_saved_trees)
-
+        # Saving performance stats
         stats['per_time'] = (end - start) * 1000
         stats['per_mem'] = peak
 
-        print("\nForest with:{n} nodes".format(n=len(nodes)))
-        print("\nMax saved Trees:{t}".format(t=max_saved_trees))
-        print("\nHash Repeated Calls:{h}".format(h=Hash_Calls))
-        print("Hash Table has {l} different Forest Conditions".format(l=len(Sol)))
-
-        # Construct Solution from Hash Table
-        if args.solver == "dpsolver_mau":
-            Solution = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y], Sol, config, plotting, exp_config['experiment']['Env_Update'] )
-            print("\nSolution: {s}".format(s=Solution))
-        if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
-            print(config[2])
-            print("\nSolution: {s}".format(s=Sol[0]))
-            print("\nSolution Times: {s}".format(s=Sol[1]))
-            print("\nFireline Level: {s}".format(s=Sol[2]))
-
+        # Saving solution stats
         stats['sol'] = Solution
         stats['max_sav_trees'] = max_saved_trees
         stats['hash_calls'] = Hash_Calls
 
         logger.log_save(stats)
-
-
 
         if exp_config['experiment']['env_type'] == "caenv":
             ProtoEnv = gymca.prototypes[1]
@@ -188,8 +189,7 @@ if __name__ == '__main__':
             print(f"Total Reward: {total_reward}")
 
     nodes = np.array(exp_config['experiment']['Size'])
-    print("Saved Trees")
-    print(saved_p_nodes)
+    print("Saved Trees: {s}".format(s=saved_p_nodes))
     plt.plot(nodes, saved_p_nodes)
     plt.savefig(args.solver, format="PNG")
     plt.close()

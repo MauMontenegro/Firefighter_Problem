@@ -24,6 +24,17 @@ Hash = {}
 
 
 def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+    """ Wise-Recursive Dynamic Programming Solver for Moving Firefighter Problem
+    :param a_pos:
+    :param nodes:
+    :param F:
+    :param time:
+    :param max_budget:
+    :param hash_calls:
+    :param config:
+    :param recursion:
+    :return:
+    """
     # F is the actual Forest
     # a_pos is the actual agent position
     # Remaining time
@@ -171,11 +182,12 @@ def hd_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
 
     return saved, 0, [solution, time_travel, fireline]
 
+
 def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
     # Control Variables
     saved = 0
     solution = []
-    time_travel=[]
+    time_travel = []
     fireline = []
     Valid = {}
     len_valid = 1
@@ -219,7 +231,7 @@ def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
             # Compute Remaining Time if agent travel to this Valid node
             elapsed_time = utils.ComputeTime(a_pos, max_saved_node, config)
             time -= elapsed_time
-            fireline_level = (max_budget - time)/2
+            fireline_level = (max_budget - time) / 2
             fireline.append(fireline_level)
             time_travel.append(elapsed_time)
 

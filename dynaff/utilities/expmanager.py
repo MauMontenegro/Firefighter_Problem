@@ -42,7 +42,7 @@ def getExpConfig(name, defpath=None):
     pathFile = path / (name.strip() + '.yaml')
 
     if not pathFile.exists() or not pathFile.is_file():
-        raise ValueError('Path either does not exists or is not a File')
+        raise ValueError('Config Path either does not exists or is not a File')
 
     config = yaml.safe_load(pathFile.open('r'))
 

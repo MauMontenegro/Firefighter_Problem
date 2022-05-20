@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import numpy as np
 import os
 
@@ -31,41 +32,49 @@ def Find_Solution(Forest, Time, a_pos, Hash, config, plotting,update):
     total_budget = Time
     spread_time = update
     last_level_burnt = 0
+    last_level_burnt_ = 0
     elapsed=0
+    labels = {}
+    # Labeling Nodes
+    for node in plotting[0]:
+        labels[int(node)] = str(node)
 
     key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
-    graphSolution(plotting,frame)
+    graphSolution(plotting,frame,labels)
     Solution = []
+    Solution_times = []
+    Solution_elapsed_time= []
+
+    labels.pop(plotting[4])
     while Hash[key]['value'] != 0:
         frame += 1
         # Getting node of max value
-        print('Times to all nodes:')
-        print(config[2][plotting[4],:])
         node = Hash[key]['max_node']
-        print('Saved node:')
-        print(node)
-
         # Computes Remaining Time if agent travel to this node
-        Time = Time - ComputeTime(a_pos, node, config)
+        time_ = ComputeTime(a_pos, node, config)
+        Time = Time - time_
         elapsed += (total_budget-Time)
+        Solution_elapsed_time.append(elapsed)
+
+        print("Time to travel")
+        print(time_)
+        print("Levels that already burned")
+        print((total_budget -Time )/spread_time + last_level_burnt_)
 
         all_levels = plotting[6]
-        levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
-        print('Levels to Burnt')
-        print(levels_to_burnt)
-        for level in range(last_level_burnt+1,(last_level_burnt + levels_to_burnt)+1):
-            print('Level')
-            print(level)
+        levels_to_burnt_ = (total_budget -Time )/spread_time + (last_level_burnt_-int(last_level_burnt_))
+        levels_to_burnt = int(levels_to_burnt_)
+
+        # Burn nodes in Tree
+        for level in range(last_level_burnt+1, (last_level_burnt + levels_to_burnt)+1):
             keys = [k for k, v in all_levels.items() if v <= level]
-            print('Keys')
-            print(keys)
             # Assign to burning nodes and quit from remaining
             for element in keys:
                 if element not in plotting[2]:
                     plotting[2].append(element)
                 if element in plotting[3]:
                     plotting[3].remove(element)
-            graphSolution(plotting, frame, 0, level, spread_time*level)
+            graphSolution(plotting, frame, labels,0, level, spread_time*level)
             frame += 1
 
         # Change pos of agent to next node in solution
@@ -76,7 +85,8 @@ def Find_Solution(Forest, Time, a_pos, Hash, config, plotting,update):
         # Saved Trees by selecting this node
         saved = DetachNode(Forest, node, plotting[6], plotting[7])
 
-        last_level_burnt += levels_to_burnt
+        last_level_burnt_ += levels_to_burnt_
+        last_level_burnt =int(last_level_burnt_)
         # Add saved Node
         plotting[7].append(int(node))
 
@@ -90,16 +100,17 @@ def Find_Solution(Forest, Time, a_pos, Hash, config, plotting,update):
             a_pos[0] = node
             a_pos[1] = node
             Solution.append(node)
+            Solution_times.append(time_)
         # New Key
-        graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
+        graphSolution(plotting, frame,labels,total_budget-Time,levels_to_burnt,elapsed)
         total_budget = Time
         key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
 
 
-    return Solution
+    return Solution,Solution_times,Solution_elapsed_time
 
 
-def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elapsed=0):
+def graphSolution(plot_config,frame_num,labels,spend_time=0,burned_levels=0,total_elapsed=0):
     Tree = plot_config[0]
     pos = plot_config[1]
     burnt_nodes = plot_config[2]
@@ -108,6 +119,8 @@ def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elaps
     path = plot_config[5]
     saved_nodes= plot_config[7]
 
+    figure(figsize=(9, 9), dpi=80)
+
     # This is for get max and min labels in plotting
     max_x_value = max(d[0] for d in pos.values())
     min_x_value = min(d[0] for d in pos.values())
@@ -115,23 +128,55 @@ def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elaps
     min_y_value = min(d[1] for d in pos.values())
 
     # Nodes
-    options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 1}
-    nx.draw_networkx_nodes(Tree, pos, nodelist=burnt_nodes, node_color="tab:red", **options)
-    nx.draw_networkx_nodes(Tree, pos, nodelist=remaining_nodes, node_color="tab:green", **options)
-    nx.draw_networkx_nodes(Tree, pos, nodelist=saved_nodes, node_color="tab:blue", **options)
-    nx.draw_networkx_nodes(Tree, pos, nodelist=[agent_pos], node_color="tab:gray", **options)
+    options = {"edgecolors": "tab:gray", "node_size": 550, "alpha": 1}
+    options_burned = {"edgecolors": "tab:gray", "node_size": 550, "alpha": 0.7}
+    nx.draw_networkx_nodes(Tree, pos, nodelist=burnt_nodes, node_color="tab:red",label="Burning",**options_burned)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=remaining_nodes, node_color="tab:green",label="Unlabeled", **options)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=saved_nodes, node_color="tab:blue",label="Saved",**options)
+    nx.draw_networkx_nodes(Tree, pos, nodelist=[agent_pos], node_color="tab:gray",label="Agent",**options)
+    nx.draw_networkx_labels(Tree, pos, labels, font_size=16, font_color='black')
 
     # Edges
-    nx.draw_networkx_edges(Tree, pos, width=2.0, alpha=0.9)
+    nx.draw_networkx_edges(Tree, pos, width=2.0, alpha=0.3)
+
+    # Text, Labels and tittle
+
+    font_title = {'family': 'abel',
+            'color': 'darkred',
+            'weight': 'normal',
+            'size': 16,
+            }
+
+    font_axis = {'family': 'Merriweather',
+                  'color': 'darkred',
+                  'weight': 'normal',
+                  'size': 15,
+                  }
+
+    font_txt = {'family': 'Merriweather',
+                 'color': 'black',
+                 'weight': 'normal',
+                 'size': 12,
+                 }
+
     plt.xticks(np.arange(min_x_value, max_x_value, 1))
     plt.yticks(np.arange(min_y_value, max_y_value, 1))
-    plt.xlabel('X-Position', fontdict=None, labelpad=20)
-    plt.ylabel('Y-Position', fontdict=None, labelpad=20)
+    plt.title('Moving Firefighter Problem: Tree Instance', fontdict=font_title, fontsize=20)
+    plt.xlabel('X-Position', fontdict=font_axis, labelpad=20)
+    plt.ylabel('Y-Position', fontdict=font_axis, labelpad=20)
+    plt.legend(loc="lower left", ncol = 4)
 
-    scal=10
-    plt.text(scal*-.8, scal*-1.3,"Travel time: {0:.2f}".format(spend_time))
-    plt.text(scal*-.8, scal*-1.4, "Burned Levels: {l}".format(l=burned_levels))
-    plt.text(scal*-.8, scal*-1.5, "Total elapsed Time: {0:.2f}".format(total_elapsed))
+    down,left = -.30, -.30
+
+    plt.text(min_x_value+down,min_y_value+left,"Travel time: {0:.2f}".format(spend_time),
+             horizontalalignment="left",
+             verticalalignment="bottom",fontdict=font_txt)
+    plt.text(min_x_value+down,min_y_value+1.2*left, "Burned Levels: {l}".format(l=burned_levels),
+             horizontalalignment="left",
+             verticalalignment="bottom",fontdict=font_txt)
+    plt.text(min_x_value+down,min_y_value+1.4*left, "Total elapsed Time: {0:.2f}".format(total_elapsed),
+             horizontalalignment="left",
+             verticalalignment="bottom",fontdict=font_txt)
 
     graph = plt.gcf()
     frame = str(frame_num)
