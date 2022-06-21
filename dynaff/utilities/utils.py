@@ -201,7 +201,6 @@ def graphSol(Sol, plot_config):
     time_step = Sol[1]
     e_time = Sol[2]
 
-    figure(figsize=(9, 9), dpi=80)
 
     # This is for get max and min labels in plotting
     max_x_value = max(d[0] for d in pos.values())
@@ -215,7 +214,7 @@ def graphSol(Sol, plot_config):
 
     all_levels = plot_config[6]
 
-    solution.insert(0, len(Tree))
+    solution.insert(0, len(Tree)-1)
     time_step.insert(0, 0)
     e_time.insert(0, 0)
 
@@ -225,9 +224,8 @@ def graphSol(Sol, plot_config):
         labels[int(node)] = str(node)
     frame=0
 
-    for sol_node, elapsed, step in solution, e_time, time_step:
-        print(all_levels)
-        print(elapsed)
+    for sol_node, elapsed, step in zip(solution, e_time, time_step):
+
         # Nodes that has level below elapsed time are burned
         keys = [k for k, v in all_levels.items() if v <= int(elapsed)]
         for element in keys:
@@ -236,12 +234,13 @@ def graphSol(Sol, plot_config):
             if element in remaining_nodes:
                 remaining_nodes.remove(element)
 
-        # Append defended node to  and eliminate from unlabeled
-        saved_nodes.append(sol_node)
+        # Append defended node to and eliminate from unlabeled
+        saved_nodes.append(int(sol_node))
 
         # Append agent actual position
-        agent_pos = sol_node
+        agent_pos = int(sol_node)
 
+        figure(figsize=(9, 9), dpi=80)
         nx.draw_networkx_nodes(Tree, pos, nodelist=burnt_nodes, node_color="tab:red", label="Burning", **options_burned)
         nx.draw_networkx_nodes(Tree, pos, nodelist=remaining_nodes, node_color="tab:green", label="Unlabeled", **options)
         nx.draw_networkx_nodes(Tree, pos, nodelist=saved_nodes, node_color="tab:blue", label="Saved", **options)
@@ -253,19 +252,19 @@ def graphSol(Sol, plot_config):
 
         # Text, Labels and tittle
 
-        font_title = {'family': 'abel',
+        font_title = {'family': 'fantasy',
                       'color': 'darkred',
                       'weight': 'normal',
                       'size': 16,
                       }
 
-        font_axis = {'family': 'Merriweather',
+        font_axis = {'family': 'fantasy',
                      'color': 'darkred',
                      'weight': 'normal',
                      'size': 15,
                      }
 
-        font_txt = {'family': 'Merriweather',
+        font_txt = {'family': 'fantasy',
                     'color': 'black',
                     'weight': 'normal',
                     'size': 12,

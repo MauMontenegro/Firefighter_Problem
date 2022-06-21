@@ -125,17 +125,17 @@ if __name__ == '__main__':
 
         # Retrieve Solution Strategy
         if args.solver == "dpsolver_mau":
-            Solution, Solution_times, Solution_elapsed = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y],
+            Sol, Solution_times, Solution_elapsed = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y],
                                                                              Sol, config, plotting,
                                                                              exp_config['experiment']['Env_Update'])
-            print("\nSolution: {s}".format(s=Solution))
+            print("\nSolution: {s}".format(s=Sol))
             print("Time elapsed by step: {s}".format(s=Solution_times))
             print("Total Elapsed time by step: {s}".format(s=Solution_elapsed))
         if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
             print("\nSolution: {s}".format(s=Sol[0]))
             print("\nTime elapsed by step: {s}".format(s=Sol[1]))
             print("\nFireline Level: {s}".format(s=Sol[2]))
-            utils.graphSol(Sol,plotting)
+            utils.graphSol(Sol, plotting)
 
         # Saving stats for general parameters
         stats = {}
@@ -149,7 +149,7 @@ if __name__ == '__main__':
         stats['per_mem'] = peak
 
         # Saving solution stats
-        stats['sol'] = Solution
+        stats['sol'] = Sol
         stats['max_sav_trees'] = max_saved_trees
         stats['hash_calls'] = Hash_Calls
 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
             obs = env.reset()
 
             # Build Path of actions that agent must follow considering DP Solution
-            Sol_Path = utils.SolutionPath(Solution, agent_pos)
+            Sol_Path = utils.SolutionPath(Sol, agent_pos)
             print("\nPath Solution of actions:\n{p}".format(p=Sol_Path))
 
             total_reward = 0.0

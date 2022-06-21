@@ -112,9 +112,11 @@ def DrawingInstance(layout, T, fire, N, path, file):
 
     # Drawing Nodes
     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 1}
+    nx.draw(T,layout, with_labels=True)
     nx.draw_networkx_nodes(T, layout, nodelist=burnt_nodes, node_color="tab:red", **options)
     nx.draw_networkx_nodes(T, layout, nodelist=[N], node_color="tab:blue", **options)
     nx.draw_networkx_nodes(T, layout, nodelist=remaining_nodes, node_color="tab:green", **options)
+
 
     # Drawing edges
     nx.draw_networkx_edges(T, layout, width=2.0, alpha=0.9)
@@ -130,8 +132,7 @@ def DrawingInstance(layout, T, fire, N, path, file):
     graph = plt.gcf()
     graph.savefig(file_path, format="PNG")
     plt.close()
-
-    return burnt_nodes, remaining_nodes
+    return remaining_nodes, burnt_nodes
 
 
 def rndtree_metric(config, path, file, n_nodes):
@@ -164,7 +165,7 @@ def rndtree_metric(config, path, file, n_nodes):
     # Internal Variables
     N = n_nodes  # Number of Nodes
     seed = config['experiment']['Seed']  # Experiment Seed
-    scale = 1  # Scale of distances
+    scale = config['experiment']['scale']  # Scale of distances
     starting_fire = rnd.randint(0, N - 1)  # Starting Fire Node
     a_x_pos = rnd.uniform(-1, 1) * scale  # X-axis Position of Agent
     a_y_pos = rnd.uniform(-1, 1) * scale  # Y-axis Position of Agent
@@ -177,6 +178,8 @@ def rndtree_metric(config, path, file, n_nodes):
     env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
     initial_pos = N  # Put agent as last node in Graph
     instance = {}  # dictionary to save instance parameters
+    # Save Instance
+    logger = ExperimentLog(path, 'instance_info')  # Create Logger Class to store instance parameters
 
     # Fill Adjacency Matrix with escalated distances in layout (without agent)
     for row in range(0, N):
@@ -226,10 +229,9 @@ def rndtree_metric(config, path, file, n_nodes):
     time = max_level * env_update  # Budget Time before Tree burns entirely
     max_budget = max_level * env_update  # Max budget of time
 
-    # Save Instance
-    logger = ExperimentLog('instance', 'instance_info')  # Create Logger Class to store instance parameters
-    nx.write_adjlist(T, "instance/MFF_Tree.adjlist")  # Saving Full Distance Matrix
-    np.save("instance/FDM_MFFP.npy", T_Ad_Sym)  # Saving Numpy array full distance matrix
+
+    nx.write_adjlist(T, path +'MFF_Tree.adjlist')  # Saving Full Distance Matrix
+    np.save(path + "FDM_MFFP.npy", T_Ad_Sym)  # Saving Numpy array full distance matrix
     instance['N'] = N
     instance['seed'] = seed
     instance['scale'] = scale
@@ -242,7 +244,7 @@ def rndtree_metric(config, path, file, n_nodes):
     # .json file need a list format ot save
     for element in pos:
         pos[element] = list(pos[element])
-    with open('instance/layout_MFF.json', 'w') as layout_file:
+    with open(path + 'layout_MFF.json', 'w') as layout_file:
         layout_file.write(json.dumps(pos))
     layout_file.close()
 
