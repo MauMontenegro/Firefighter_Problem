@@ -2,14 +2,15 @@ from dynaff.inputs import rndtree_metric
 
 
 if __name__ == '__main__':
-    grid = [50,60,75,90,100]
+    grid = [10, 20, 30, 40, 50, 60]
     exp_config={}
     exp_config['experiment'] = {}
-    exp_config['experiment']['Seed'] = 800
+    exp_config['experiment']['Seed'] = 600
     exp_config['experiment']['Env_Update'] = 1
     exp_config['experiment']['env_type'] = 'rnd_tree'
     exp_config['experiment']['env_metric'] = 'metric'
     exp_config['experiment']['scale'] = 1
+
 
     for n_nodes in grid:
         # Create path and file name

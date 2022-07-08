@@ -193,3 +193,11 @@ if __name__ == '__main__':
     plt.plot(nodes, saved_p_nodes)
     plt.savefig(args.solver, format="PNG")
     plt.close()
+
+    plt.plot(nodes,saved_p_nodes, 'o-', color='green', label='Saved nodes by instance')
+    plt.legend(loc="upper left")
+    plt.xlabel("Node Instances")
+    plt.ylabel("Saved Nodes")
+    plt.title("Saved Nodes using Dynamic Dyna-MFP")
+    plt.grid()
+    plt.savefig("Dyna_MFP", format='png')
