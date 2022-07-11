@@ -16,6 +16,7 @@ On Progress:
   
   How to execute?:
   python dynaff.py -s dpsolver_mau -i caenv -c rndtree_config
+  
     -s is the algorithm we want to use
     -i is the env type in the input
     -c is the config file for solver and input type
