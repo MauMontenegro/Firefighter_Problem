@@ -71,7 +71,7 @@ if __name__ == '__main__':
     # Get input arguments for input_instance_type, solver and config_file
     args = argParser(sys.argv[:])
 
-    # Retrieve Experiment Configuration yaml file
+    # Retrieve Experiment Configuration .yaml file
     exp_config = getExpConfig(args.config)
 
     # Get Solver Function and Input Manager Function
@@ -96,14 +96,16 @@ if __name__ == '__main__':
         agent_pos_x = input[0][0]
         agent_pos_y = input[0][1]
         agent_pos = agent_pos_x, agent_pos_y
-        nodes = input[1]
-        Forest = input[2]
-        time = input[3]
-        max_budget = input[4]
-        config = input[5]
-        plotting = input[6]
+        starting_fire_node = input[1]
+        nodes = input[2]
+        Forest = input[3]
+        time = input[4]
+        max_budget = input[5]
+        config = input[6]
+        plotting = input[7]
 
         # Call The solver
+        # THIS IS THE WHERE WE CALL THE DYNAMIC PROGRAMMING FUNCTION
         # ----------------------------------------------------------------------------------------------------------
         tracing_start()
         start = tm.time()
@@ -125,22 +127,23 @@ if __name__ == '__main__':
 
         # Retrieve Solution Strategy
         if args.solver == "dpsolver_mau":
-            Sol, Solution_times, Solution_elapsed = utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y],
-                                                                             Sol, config, plotting,
-                                                                             exp_config['experiment']['Env_Update'])
-            print("\nSolution: {s}".format(s=Sol))
-            print("Time elapsed by step: {s}".format(s=Solution_times))
-            print("Total Elapsed time by step: {s}".format(s=Solution_elapsed))
+            Sol= utils.Find_Solution(Forest, time, [agent_pos_x, agent_pos_y],
+                                                                        Sol, config, plotting,
+                                                                        exp_config['experiment']['Env_Update'])
+            print("\nSolution Node Sequence: {s}".format(s=Sol))
+            #print("Time elapsed by step: {s}".format(s=Solution_times))
+            #print("Total Elapsed time by step: {s}".format(s=Solution_elapsed))
         if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
             print("\nSolution: {s}".format(s=Sol[0]))
             print("\nTime elapsed by step: {s}".format(s=Sol[1]))
             print("\nFireline Level: {s}".format(s=Sol[2]))
-            utils.graphSol(Sol, plotting)
+            utils.graphSolution(Sol, plotting)
 
         # Saving stats for general parameters
         stats = {}
         stats['env_type'] = exp_config['experiment']['env_type']
         stats['init_pos'] = int(agent_pos_x), int(agent_pos_y)
+        stats['starting_fire'] = int(starting_fire_node)
         stats['seed'] = exp_config['experiment']['Seed']
         stats['max_budget'] = max_budget
 
@@ -194,7 +197,7 @@ if __name__ == '__main__':
     plt.savefig(args.solver, format="PNG")
     plt.close()
 
-    plt.plot(nodes,saved_p_nodes, 'o-', color='green', label='Saved nodes by instance')
+    plt.plot(nodes, saved_p_nodes, 'o-', color='green', label='Saved nodes by instance')
     plt.legend(loc="upper left")
     plt.xlabel("Node Instances")
     plt.ylabel("Saved Nodes")

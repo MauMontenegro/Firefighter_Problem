@@ -84,7 +84,8 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, config):
             Valid[node] = {}
             Valid[node]['level'] = nodes[node]['level']
-
+    print("Validsss:")
+    print(Valid)
     saved = 0
     pbar = 0
 

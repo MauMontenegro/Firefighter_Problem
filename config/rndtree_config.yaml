@@ -1,11 +1,10 @@
 experiment:
   env_type: rndtree   # Environment Type
   env_metric: 1       # 1 for metric distances or 0 for non-metric
-  Seed: 1020          # Seed for reproducibility
-  Runs: 1             # How many Runs per Tree
-  Size: [5,10,15,20]  # Number of Nodes
+  Seed: 410           # Seed for reproducibility
+  Runs: 10            # How many Runs per Tree
+  Size: [20]          # Number of Nodes
   Initial_pos: 8      # Initial Agent Node Position
   Env_Update: 1       # Environment Update Ticks
-  wr_l: 1             # Weight Lower Range in edges
-  wr_u: 20            # Weight Upper Range in edges
-  scale: 1            # Scale of distances in graph
+  wr_l: 1            # Weight Lower Range in edges
+  wr_u: 20           # Weight Upper Range in edges
