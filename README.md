@@ -10,8 +10,7 @@ Some Features:
   - DP Solution for Random Trees with Non-Metric Distances
 
 On Progress:
-  -Testing Multiple Fires
-  -Create Graphs with Metric Distances
+  -Testing Multiple Fires  
   -Testing Other DP Algorithms
   
   
@@ -21,11 +20,4 @@ On Progress:
     -i is the env type in the input
     -c is the config file for solver and input type
     
-  Interface:
-  
-  solver(Agent_Position, Node_List_Actual_Forest, Forest_Structure, Actual_Time, Hash_Table, Max_Time_budget, 0, config_file)
-  
-    - Node_List_Actual_Forest: Is a Dictionary containing Node_Labels in Tree Structure with his Level
-    - Hash_Table is also a Dictionary
-    - 0 is for counting Hash Valid Calls
-    - config_file pass some additional arguments that can be useful like adjacency matrix
+
