@@ -3,7 +3,7 @@ import random as rnd
 import numpy as np
 from ete3 import Tree
 import matplotlib.pyplot as plt
-
+import json
 
 def TreeConstruct(F, all_nodes, Tree, root):
     levels = nx.single_source_shortest_path_length(Tree, root)
@@ -35,7 +35,6 @@ def rndtree_metric(config, path, file, n_nodes):
     seed = config['experiment']['Seed']  # Experiment Seed
     scale = 10
     starting_fire = rnd.randint(0, N - 1)
-
     print('Starting fire in Node:')
     print(starting_fire)
 
@@ -45,6 +44,9 @@ def rndtree_metric(config, path, file, n_nodes):
 
     # Create a Random Tree (nx use a Prufer Sequence) and get 'pos' layout for nodes
     T = nx.random_tree(n=N, seed=seed)
+    # Save adjlist
+    nx.write_adjlist(T, path + "MFF_Tree.adjlist")
+
     # Could use spring or spectral Layout
     pos = nx.spring_layout(T, seed=seed)
 
@@ -84,10 +86,15 @@ def rndtree_metric(config, path, file, n_nodes):
     T.add_node(N)
     pos[N] = [a_x_pos, a_y_pos]
 
+
+    # Save Position
+    json_string=json.dumps(list(pos))
+    with open(path+ 'layout_MFF.json', 'w') as outfile:
+        outfile.write(json_string)
+    # Save distance matrix
+    np.save(path+"FDM_MFFP.npy",T_Ad_Sym)
+
     all_nodes = {}  # List of All Nodes
-
-    # Draw and saving Graph
-
     # This is for get max and min labels in plotting
     max_x_value = max(d[0] for d in pos.values())
     min_x_value = min(d[0] for d in pos.values())
@@ -101,6 +108,7 @@ def rndtree_metric(config, path, file, n_nodes):
     remaining_nodes.pop(-1)
     saved_nodes=[]
 
+    # Draw and saving Graph
     options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 1}
     nx.draw_networkx_nodes(T, pos, nodelist=burnt_nodes, node_color="tab:red", **options)
     nx.draw_networkx_nodes(T, pos, nodelist=[N], node_color="tab:blue", **options)
@@ -118,6 +126,18 @@ def rndtree_metric(config, path, file, n_nodes):
     graph.savefig(file_path, format="PNG")
     plt.close()
 
+    # Save General Parameters
+    parameters={}
+    parameters["N"]=N
+    parameters["seed"] = seed
+    parameters["scale"] = scale
+    parameters["start_fire"] = N
+    parameters["a_pos_x"] = a_x_pos
+    parameters["a_pos_y"] = a_y_pos
+    param_string=json.dumps(parameters)
+    with open(path+ 'instance_info.json', 'w') as outfile:
+        outfile.write(param_string)
+
     # Initialize Tree Structure using ete3
     F = Tree()  # Initialize a Forest. Tree() is a func in ete3 with Newick format.
 
@@ -128,8 +148,7 @@ def rndtree_metric(config, path, file, n_nodes):
     env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
     time = max_level * env_update  # Budget Time before Tree burns entirely
     max_budget = max_level * env_update
-    print('Timee')
-    print(time)
+
     # Choose Initial Position of Agent
     initial_pos = N
 
