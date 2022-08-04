@@ -2,7 +2,7 @@ from dynaff.inputs import rndtree_metric
 import os
 
 if __name__ == '__main__':
-    grid = [10, 20, 30, 40, 50, 60]
+    grid = [50]
     exp_config={}
     exp_config['experiment'] = {}
     exp_config['experiment']['Seed'] = 600

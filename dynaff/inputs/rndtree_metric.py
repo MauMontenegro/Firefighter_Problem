@@ -35,8 +35,7 @@ def rndtree_metric(config, path, file, n_nodes):
     seed = config['experiment']['Seed']  # Experiment Seed
     scale = 10
     starting_fire = rnd.randint(0, N - 1)
-    print('Starting fire in Node:')
-    print(starting_fire)
+
 
     # Adding Agent Node
     a_x_pos = rnd.uniform(-1, 1) * scale
@@ -131,7 +130,7 @@ def rndtree_metric(config, path, file, n_nodes):
     parameters["N"]=N
     parameters["seed"] = seed
     parameters["scale"] = scale
-    parameters["start_fire"] = N
+    parameters["start_fire"] = starting_fire
     parameters["a_pos_x"] = a_x_pos
     parameters["a_pos_y"] = a_y_pos
     param_string=json.dumps(parameters)
