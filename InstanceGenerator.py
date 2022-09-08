@@ -1,8 +1,8 @@
 from dynaff.inputs import rndtree_metric
-import os
+
 
 if __name__ == '__main__':
-    grid = [50]
+    grid = [10, 20, 30, 40, 50, 60]
     exp_config={}
     exp_config['experiment'] = {}
     exp_config['experiment']['Seed'] = 600
@@ -15,8 +15,6 @@ if __name__ == '__main__':
     for n_nodes in grid:
         # Create path and file name
         path = 'Instances/' + 'Instance_' + str(n_nodes) + '/'
-        if os.path.exists('Instances/' + 'Instance_' + str(n_nodes)) == False:
-            os.mkdir('Instances/' + 'Instance_' + str(n_nodes))
         file = 'img_' + str(n_nodes)
 
         # Get Instance for Selected Solver and config File.
