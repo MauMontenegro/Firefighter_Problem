@@ -2,100 +2,83 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import json
 
-def ComputeTime(a_pos, node_pos, config):
-    delta_time = 0
-    if config[0] == "caenv":
-        x = node_pos.split("-")
-        n_x = int(x[0])
-        n_y = int(x[1])
-        delta_time = max(abs(n_x - a_pos[0]), abs(n_y - a_pos[1]))
-    if config[0] == "rndtree":
-        Adj = config[2]
-        delta_time = Adj[int(node_pos)][int(a_pos[0])]
+def ComputeTime(a_pos, node_pos,dist_matrix):
+    Adj = dist_matrix
+    delta_time = Adj[int(node_pos)][int(a_pos)]
     return delta_time
 
-def DetachNode(t, cutting_node, levels,saved_nodes):
+def DetachNode(t, cutting_node, levels=0,saved_nodes=0):
     saved = 1
     father = t.search_nodes(name=cutting_node)[0]
     for node in father.iter_descendants("postorder"):
         saved += 1
-        levels.pop(int(node.name))
-        saved_nodes.append(int(node.name))
+        #levels.pop(int(node.name))
+        #saved_nodes.append(int(node.name))
     father.detach()
     return saved
 
-def Find_Solution(Forest, Time, a_pos, Hash, config, plotting,update):
+def Find_Solution(Forest, Time, a_pos, Hash, dist_matrix):
     # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
     frame = 0
     total_budget = Time
-    spread_time = update
-    last_level_burnt = 0
-    elapsed=0
+    #spread_time = update
+    #last_level_burnt = 0
+    elapsed = 0
 
-    key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
-    graphSolution(plotting,frame)
+    key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos)
+    #graphSolution(plotting,frame)
     Solution = []
     while Hash[key]['value'] != 0:
         frame += 1
         # Getting node of max value
-        print('Times to all nodes:')
-        print(config[2][plotting[4],:])
+        # print('Times to all nodes:')
+        # print(config[2][plotting[4],:])
         node = Hash[key]['max_node']
-        print('Saved node:')
-        print(node)
 
         # Computes Remaining Time if agent travel to this node
-        Time = Time - ComputeTime(a_pos, node, config)
+        Time = Time - ComputeTime(a_pos, node, dist_matrix)
         elapsed += (total_budget-Time)
 
-        all_levels = plotting[6]
-        levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
-        print('Levels to Burnt')
-        print(levels_to_burnt)
-        for level in range(last_level_burnt+1,(last_level_burnt + levels_to_burnt)+1):
-            print('Level')
-            print(level)
-            keys = [k for k, v in all_levels.items() if v <= level]
-            print('Keys')
-            print(keys)
-            # Assign to burning nodes and quit from remaining
-            for element in keys:
-                if element not in plotting[2]:
-                    plotting[2].append(element)
-                if element in plotting[3]:
-                    plotting[3].remove(element)
-            graphSolution(plotting, frame, 0, level, spread_time*level)
-            frame += 1
+        #all_levels = plotting[6]
+        #levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
+        #print('Levels to Burnt')
+        #print(levels_to_burnt)
+        # for level in range(last_level_burnt+1,(last_level_burnt + levels_to_burnt)+1):
+        #     print('Level')
+        #     print(level)
+        #     keys = [k for k, v in all_levels.items() if v <= level]
+        #     print('Keys')
+        #     print(keys)
+        #     # Assign to burning nodes and quit from remaining
+        #     for element in keys:
+        #         if element not in plotting[2]:
+        #             plotting[2].append(element)
+        #         if element in plotting[3]:
+        #             plotting[3].remove(element)
+        #     graphSolution(plotting, frame, 0, level, spread_time*level)
+        #     frame += 1
 
         # Change pos of agent to next node in solution
-        pos = plotting[1]
+        #pos = plotting[1]
 
-        pos[plotting[4]] = pos[int(node)]
-        plotting[1] = pos
+        #pos[plotting[4]] = pos[int(node)]
+        #plotting[1] = pos
         # Saved Trees by selecting this node
-        saved = DetachNode(Forest, node, plotting[6], plotting[7])
+        saved = DetachNode(Forest, node)
 
-        last_level_burnt += levels_to_burnt
+        # last_level_burnt += levels_to_burnt
         # Add saved Node
-        plotting[7].append(int(node))
+        # plotting[7].append(int(node))
 
         # New agent position moves to node position
-        if config[0] == "caenv":
-            x = node.split("-")
-            a_pos[0] = int(x[0])
-            a_pos[1] = int(x[1])
-            Solution.append([a_pos[0], a_pos[1]])
-        if config[0] == "rndtree":
-            a_pos[0] = node
-            a_pos[1] = node
-            Solution.append(node)
+        a_pos = node
+        Solution.append(node)
         # New Key
-        graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
+        #graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
         total_budget = Time
-        key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
-
-
+        key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos)
     return Solution
 
 
@@ -218,3 +201,39 @@ def SolutionPath( Solution, init_pos):
 
             Path.append(action)
     return Path
+
+
+def generateInstance(load,path,directory):
+    # Return [Tree,s_fire,Dist_Matrix,seed,scale,ax_pos,ay_pos]
+    if load:
+        T = nx.read_adjlist(path / directory / "MFF_Tree.adjlist")
+        # Relabeling Nodes
+        mapping = {}
+        for node in T.nodes:
+            mapping[node] = int(node)
+        T = nx.relabel_nodes(T, mapping)
+        T_Ad_Sym = np.load(path / directory / "FDM_MFFP.npy")
+        lay = open(path / directory / "layout_MFF.json")
+        pos = {}
+        pos_ = json.load(lay)
+
+        for position in pos_:
+            pos[int(position)] = pos_[position]
+        # Get Instance Parameters
+        p = open(path / directory / "instance_info.json")
+        parameters = json.load(p)
+        N = parameters["N"]
+        seed = parameters["seed"]
+        scale = parameters["scale"]
+        starting_fire = parameters["start_fire"]
+        tree_height= parameters["tree_height"]
+
+        T = nx.bfs_tree(T, starting_fire)
+        T.add_node(N)
+
+        degrees = T.degree()
+        max_degree = max(j for (i, j) in degrees)
+        root_degree = T.degree[starting_fire]
+
+
+        return T, N, starting_fire, T_Ad_Sym, seed, scale, N, max_degree, root_degree, tree_height

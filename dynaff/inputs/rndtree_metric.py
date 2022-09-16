@@ -1,4 +1,3 @@
-import random as rnd
 import numpy as np
 from ete3 import Tree
 import matplotlib.pyplot as plt
@@ -58,7 +57,9 @@ def TreeConstruct(F, all_nodes, Tree, root):
         levels: list of nodes with his level in rooted Tree
     """
     levels = nx.single_source_shortest_path_length(Tree, root)  # Level of nodes in rooted Tree
+    root_degree=Tree.degree[root]
     degrees = list(Tree.degree)                                 # Degree of each node in rooted Tree
+    max_degree = max(degrees,key=lambda item:item[1])[1]
     max_level = max(levels.values())                            # Level of Tree
     edges = list(nx.bfs_edges(Tree, source=root))               # List of edges in rooted Tree with BFS order
 
@@ -82,7 +83,36 @@ def TreeConstruct(F, all_nodes, Tree, root):
     for degree in degrees:
         all_nodes[str(degree[0])]['degree'] = degree[1]
 
-    return F, all_nodes, max_level, levels
+    return F, all_nodes, max_level, levels, root_degree, max_degree
+
+def write_FFP_file(dimension, edges, coords, fire, output_path):
+    with open(output_path, "w") as writer:
+        writer.write("DIMENSION: {}\n".format(dimension))
+        writer.write("FIRE_START: {}\n".format(fire))
+        writer.write("FIREFIGHTER: {}\n".format(dimension))
+
+        # coord display
+        writer.write("DISPLAY_DATA_SECTION\n")
+        for i in range(dimension + 1):
+            coord = coords[i]
+            writer.write("{} {} {}\n".format(i, coord[0], coord[1]))
+
+        # edge section
+        writer.write("EDGE_SECTION\n")
+        for e in edges:
+            writer.write("{} {}\n".format(e[0], e[1]))
+
+def write_FFP_summary(instance, output_file):
+    with open(output_file, "w") as writer:
+        writer.write("TREE SEED: {}\n".format(instance["seed"]))
+        writer.write("DIMENSION: {}\n".format(instance["N"]))
+        writer.write("FIRE_START: {}\n".format(instance["start_fire"]))
+        writer.write("FIREFIGHTER: {}\n".format(instance["N"]))
+        writer.write("DELTA: {}\n".format(instance["delta"]))
+        writer.write("ROOT DEGREE: {}\n".format(instance["root_degree"]))
+        writer.write("MAX DEGREE: {}\n".format(instance["max_degree"]))
+        writer.write("TREE HEIGHT: {}\n".format(instance["tree_height"]))
+        writer.write("SCALE_DISTANCE: {}\n".format(instance["scale"]))
 
 
 def DrawingInstance(layout, T, fire, N, path, file):
@@ -111,21 +141,28 @@ def DrawingInstance(layout, T, fire, N, path, file):
     remaining_nodes.pop(-1)
 
     # Drawing Nodes
-    options = {"edgecolors": "tab:gray", "node_size": 500, "alpha": 1}
-    nx.draw(T,layout, with_labels=True)
-    nx.draw_networkx_nodes(T, layout, nodelist=burnt_nodes, node_color="tab:red", **options)
-    nx.draw_networkx_nodes(T, layout, nodelist=[N], node_color="tab:blue", **options)
-    nx.draw_networkx_nodes(T, layout, nodelist=remaining_nodes, node_color="tab:green", **options)
-
+    fig,ax=plt.subplots()
+    options = {"edgecolors": "tab:gray", "node_size": 300, "alpha": 1}
+    nx.draw(T,layout, with_labels=True,font_size=10,ax=ax)
+    nx.draw_networkx_nodes(T, layout, nodelist=burnt_nodes, node_color='#e33434',label="Ignition", **options)
+    nx.draw_networkx_nodes(T, layout, nodelist=[N], node_color='#34e3e0',label="Firefighter", **options)
+    nx.draw_networkx_nodes(T, layout, nodelist=remaining_nodes, node_color='#62fa69',label="Remaining", **options)
 
     # Drawing edges
-    nx.draw_networkx_edges(T, layout, width=2.0, alpha=0.9)
+    nx.draw_networkx_edges(T, layout, width=1.0, alpha=0.8,edge_color='#959895')
 
     # Labels and scale plotting
-    plt.xticks(np.arange(min_x_value, max_x_value, 1))
-    plt.yticks(np.arange(min_y_value, max_y_value, 1))
-    plt.xlabel('X-Position', fontdict=None, labelpad=20)
-    plt.ylabel('Y-Position', fontdict=None, labelpad=20)
+    plt.axis('on')
+    plt.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    #plt.xticks(np.arange(min_x_value, max_x_value, 1))
+    #plt.yticks(np.arange(min_y_value, max_y_value, 1))
+    plt.xlabel('X-Position', fontdict=None, labelpad=5)
+    plt.ylabel('Y-Position', fontdict=None, labelpad=5)
+    title_label= "MFP Tree Instance with {N} vertices".format(N=N)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    plt.legend(loc="lower left", ncol=1, bbox_to_anchor=(1, 0.5), labelspacing=1)
+    plt.title(title_label)
 
     # Plotting and saving Image
     file_path = path + file + '.png'
@@ -135,8 +172,8 @@ def DrawingInstance(layout, T, fire, N, path, file):
     return remaining_nodes, burnt_nodes
 
 
-def rndtree_metric(config, path, file, n_nodes):
-    """ Creates an instance of the problem with metric distances.
+def rndtree_metric(config, path, file, n_nodes, rnd_generators):
+    """ Creates N instances for a determined Size Tree with metric distances.
 
     Create a random 'networkx' tree object, adds an external 'agent' node, and fill his original adjacency matrix
     with escalated metric distances between all nodes. Also, saves instance parameters and draws initial graph
@@ -152,6 +189,8 @@ def rndtree_metric(config, path, file, n_nodes):
         Contains the file name
     :param n_nodes: int
         Total number of nodes in graph
+    :param rnd_generators: default_generator
+        batch of N random number generators for each instance
     :return:
         Initial_agent_position: int array
         Node_List: dic
@@ -161,97 +200,121 @@ def rndtree_metric(config, path, file, n_nodes):
         Config: Array containing environment or metric config
         Plotting: Array containing drawing config
     """
+    for instance in range(config['experiment']['instances']):
+        # Create Instance Specific Folder
+        instance_path = path + "Instance_" + str(instance) + "/"
 
-    # Internal Variables
-    N = n_nodes  # Number of Nodes
-    seed = config['experiment']['Seed']  # Experiment Seed
-    scale = config['experiment']['scale']  # Scale of distances
-    starting_fire = rnd.randint(0, N - 1)  # Starting Fire Node
-    a_x_pos = rnd.uniform(-1, 1) * scale  # X-axis Position of Agent
-    a_y_pos = rnd.uniform(-1, 1) * scale  # Y-axis Position of Agent
-    T = nx.random_tree(n=N, seed=seed)  # Create a Random Tree (nx use a Prufer Sequence by default)
-    pos = nx.spring_layout(T, seed=seed)  # Use a spring layout to draw nodes
-    nx.write_adjlist(T, "AdjList.adjlist")  # Save Adjacency list
-    T_Ad = np.zeros((N + 1, N + 1))  # Adjacency Matrix that contains distances for all nodes including agent
-    all_nodes = {}  # Dictionary to store all nodes
-    saved_nodes = []  # Array of saved nodes for Drawing
-    env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
-    initial_pos = N  # Put agent as last node in Graph
-    instance = {}  # dictionary to save instance parameters
-    # Save Instance
-    logger = ExperimentLog(path, 'instance_info')  # Create Logger Class to store instance parameters
+        N = n_nodes  # Number of Nodes
+        n_instances = config['experiment']['instances'] # Number of instances per Node Size
+        scale = config['experiment']['scale']  # Edge distance scale
+        env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
 
-    # Fill Adjacency Matrix with escalated distances in layout (without agent)
-    for row in range(0, N):
-        for column in range(row, N):
-            if row == column:
-                T_Ad[row][column] = 0
-            else:
-                x_1 = pos[row][0]
-                x_2 = pos[column][0]
-                y_1 = pos[row][1]
-                y_2 = pos[column][1]
-                dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-                T_Ad[row][column] = dist * scale
+        # Random Variables. Use rnd_generator specific to each instance.
+        starting_fire = rnd_generators[instance].integers(0, N - 1)
+        a_x_pos = rnd_generators[instance].uniform(-1, 1) * scale
+        a_y_pos = rnd_generators[instance].uniform(-1, 1) * scale
+        tree_seed = rnd_generators[instance].integers(2**32-1)
+        T = nx.random_tree(n=N, seed = int(tree_seed))
+        pos = nx.spring_layout(T, seed = int(tree_seed))  # Use a spring layout to draw nodes
 
-    # Scale Position in Layout for coherence between plotting and matrix distances
-    for element in pos:
-        pos[element][0] = pos[element][0] * scale
-        pos[element][1] = pos[element][1] * scale
+        # Needed Structures
+        T_Ad = np.zeros((N + 1, N + 1))  # Adjacency Matrix that contains distances for all nodes including agent
+        all_nodes = {}  # Dictionary to store all nodes
+        saved_nodes = []  # Array of saved nodes for Drawing
+        initial_pos = N  # Put agent as last node in Graph
+        instance = {}  # dictionary to save instance parameters
 
-    # Adding Agent Node to Full Adjacency Matrix (Agent is added to last row and column 'N')
-    for node in range(0, N):
-        x_1 = pos[node][0]
-        x_2 = a_x_pos
-        y_1 = pos[node][1]
-        y_2 = a_y_pos
-        dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-        T_Ad[node][N] = dist
+        # Save Instance
+        logger = ExperimentLog(instance_path, 'instance_info')  # Create Logger Class to store instance parameters
 
-    # Create a Symmetric Matrix with upper part of T_Ad (For symmetric distances)
-    T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)
+        # Fill Adjacency Matrix with escalated distances in layout (without agent)
+        for row in range(0, N):
+            for column in range(row, N):
+                if row == column:
+                    T_Ad[row][column] = 0
+                else:
+                    x_1 = pos[row][0]
+                    x_2 = pos[column][0]
+                    y_1 = pos[row][1]
+                    y_2 = pos[column][1]
+                    dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
+                    T_Ad[row][column] = dist * scale
 
-    # Add Agent Node to Tree and add his escalated position
-    T.add_node(N)
-    pos[N] = [a_x_pos, a_y_pos]
+        # Scale Position in Layout for coherence between plotting and matrix distances
+        for element in pos:
+            pos[element][0] = pos[element][0] * scale
+            pos[element][1] = pos[element][1] * scale
 
-    # Draw Instance
-    # 'remaining_nodes': Unlabeled Nodes for Drawing
-    # 'burnt_nodes': Burnt labeled nodes for drawing
-    remaining_nodes, burnt_nodes = DrawingInstance(pos, T, starting_fire, N, path, file)
+        # Adding Agent Node to Full Adjacency Matrix (Agent is added to last row and column 'N')
+        for node in range(0, N):
+            x_1 = pos[node][0]
+            x_2 = a_x_pos
+            y_1 = pos[node][1]
+            y_2 = a_y_pos
+            dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
+            T_Ad[node][N] = dist
 
-    # Initialize a Forest.
-    # Tree() is a function in 'ete3' library with Newick format.
-    F = Tree()
+        # Create a Symmetric Matrix with upper part of T_Ad (For symmetric distances)
+        T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)
 
-    # Construct Tree structures
-    F, all_nodes, max_level, levels = TreeConstruct(F, all_nodes, T, starting_fire)
-    time = max_level * env_update  # Budget Time before Tree burns entirely
-    max_budget = max_level * env_update  # Max budget of time
+        # Add Agent Node to Tree and add his escalated position
+        T.add_node(N)
+        pos[N] = [a_x_pos, a_y_pos]
+
+        # Draw Instance
+        # 'remaining_nodes': Unlabeled Nodes for Drawing
+        # 'burnt_nodes': Burnt labeled nodes for drawing
+        remaining_nodes, burnt_nodes = DrawingInstance(pos, T, starting_fire, N, instance_path, file)
+
+        # Initialize a Forest.
+        # Tree() is a function in 'ete3' library with Newick format.
+        F = Tree()
+
+        #TODO: Instance Generator does not need to generate Tree
+
+        # Construct Tree structures
+        F, all_nodes, max_level, levels, root_degree, max_degree = TreeConstruct(F, all_nodes, T, starting_fire)
+        # time = max_level * env_update  # Budget Time before Tree burns entirely
+        # max_budget = max_level * env_update  # Max budget of time
 
 
-    nx.write_adjlist(T, path +'MFF_Tree.adjlist')  # Saving Full Distance Matrix
-    np.save(path + "FDM_MFFP.npy", T_Ad_Sym)  # Saving Numpy array full distance matrix
-    instance['N'] = N
-    instance['seed'] = seed
-    instance['scale'] = scale
-    instance['start_fire'] = starting_fire
-    instance['a_pos_x'] = a_x_pos
-    instance['a_pos_y'] = a_y_pos
-    logger.log_save(instance)
+        nx.write_adjlist(T, instance_path +'MFF_Tree.adjlist')  # Saving Full Distance Matrix
+        np.save(instance_path + "FDM_MFFP.npy", T_Ad_Sym)  # Saving Numpy array full distance matrix
 
-    # Save position layout as .json file
-    # .json file need a list format ot save
-    for element in pos:
-        pos[element] = list(pos[element])
-    with open(path + 'layout_MFF.json', 'w') as layout_file:
-        layout_file.write(json.dumps(pos))
-    layout_file.close()
+        # Instance Variables
+        instance['N'] = N
+        instance['seed'] = int(tree_seed)
+        instance['scale'] = scale
+        instance['start_fire'] = int(starting_fire)
+        instance['a_pos_x'] = int(a_x_pos)
+        instance['a_pos_y'] = int(a_y_pos)
+        instance['tree_height'] = max_level
+        instance['root_degree'] = root_degree
+        instance['max_degree'] = max_degree
+        # Initial distance between agent position and fire ignition
+        instance['delta'] = T_Ad[starting_fire][N]
+        logger.log_save(instance)
 
-    # Create Additional config array due to environments differences
-    Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
+        # Save position layout as .json file
+        # .json file need a list format ot save
+        for element in pos:
+            pos[element] = list(pos[element])
+        with open(instance_path + 'layout_MFF.json', 'w') as layout_file:
+            layout_file.write(json.dumps(pos))
+        layout_file.close()
 
-    # Create Plotting array containing drawing variables
-    Plotting = [T, pos, burnt_nodes, remaining_nodes, N, path + file + '/', levels, saved_nodes]
+        # File created for Backtracking Algorithm
+        output_file = instance_path + "BCKTRCK.mfp"
+        write_FFP_file(n_nodes, T.edges(), pos, starting_fire, output_file)
 
-    return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config, Plotting
+        # CREATE A SUMMARY FILE FOR EACH INSTANCE
+        output_file = instance_path + "SUMMARY.mfp"
+        write_FFP_summary(instance, output_file)
+
+        # Create Additional config array due to environments differences
+        #Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
+
+        # Create Plotting array containing drawing variables
+        #Plotting = [T, pos, burnt_nodes, remaining_nodes, N, instance_path + file + '/', levels, saved_nodes]
+
+        #return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config, Plotting, pos

@@ -36,7 +36,7 @@ def Feasible(node_pos, a_pos, time, level, max_budget, config):
 Hash = {}
 
 
-def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursion):
+def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, dist_matrix, recursion):
     """ Wise-Recursive Dynamic Programming Solver for Moving Firefighter Problem
 
     Recursive Dynamic Programming function. It takes a Forest in ete3 form and construct a key with the state of the
@@ -62,14 +62,13 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
     """
 
     h = hash_calls
-
     # Base Conditions of recursion (Tree is empty or time is over)
     if (F.is_leaf() == True) or (time <= 0):
         return 0, h
 
     # Construct the Key to store in Hash
-    # String: " Forest_newick; remaining_time; pos_x, pos_y "
-    key = F.write(format=8) + ';' + str(time) + ';' + str(a_pos[0]) + ',' + str(a_pos[1])
+    # String: " Forest_newick; remaining_time; a_pos_x, a_pos_y "
+    key = F.write(format=8) + ';' + str(time) + ';' + str(a_pos)
 
     # Search if we already see this Forest Conditions. If not, create new key entry
     if key in Hash:
@@ -81,9 +80,10 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
     # Compute Feasible Nodes in actual Forest and add to Valid Node Dictionary
     Valid = {}
     for node in nodes:
-        if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, config):
+        if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, dist_matrix):
             Valid[node] = {}
             Valid[node]['level'] = nodes[node]['level']
+
     saved = 0
     pbar = 0
 
@@ -102,10 +102,7 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         # In metric distance envs like "caenv", only send to the following recurrence a copy of 'Valid'
         # cause once a node is invalid due delta_time from agent position it never will be valid again.
         # When there are no metric distance envs, like "rndtree", we send all nodes in actual forest (except pruned)
-        if config[1] == 1:
-            Valid_copy = Valid.copy()
-        if config[1] == 0:
-            Valid_copy = nodes.copy()
+        Valid_copy = Valid.copy()
 
         # This node will be pruned, so next iter will not ve valid(metric or no metric distances)
         Valid_copy.pop(valid_node)
@@ -114,19 +111,13 @@ def dpsolver_mau(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
         saved = utils.SavedNodes(F_copy, valid_node, Valid_copy)
 
         # Compute Remaining Time if agent travel to this Valid node
-        t_ = time - utils.ComputeTime(a_pos, valid_node, config)
+        t_ = time - utils.ComputeTime(a_pos, valid_node, dist_matrix)
 
         # New agent position moves to node position
-        if config[0] == "caenv":
-            x = valid_node.split("-")
-            n_x = int(x[0])
-            n_y = int(x[1])
-        if config[0] == "rndtree":
-            n_x = valid_node
-            n_y = valid_node
+        n_x = valid_node
 
         # Solve next sub-problem
-        value, h = dpsolver_mau([n_x, n_y], Valid_copy, F_copy, t_, max_budget, h, config, recursion + 1)
+        value, h = dpsolver_mau(n_x, Valid_copy, F_copy, t_, max_budget, h, dist_matrix, recursion + 1)
 
         # Assign Valid Node value by his returning best value + is current saved trees
         Valid[valid_node]['value'] = value + saved
