@@ -57,7 +57,9 @@ def TreeConstruct(F, all_nodes, Tree, root):
         levels: list of nodes with his level in rooted Tree
     """
     levels = nx.single_source_shortest_path_length(Tree, root)  # Level of nodes in rooted Tree
+    root_degree=Tree.degree[root]
     degrees = list(Tree.degree)                                 # Degree of each node in rooted Tree
+    max_degree = max(degrees,key=lambda item:item[1])[1]
     max_level = max(levels.values())                            # Level of Tree
     edges = list(nx.bfs_edges(Tree, source=root))               # List of edges in rooted Tree with BFS order
 
@@ -81,7 +83,36 @@ def TreeConstruct(F, all_nodes, Tree, root):
     for degree in degrees:
         all_nodes[str(degree[0])]['degree'] = degree[1]
 
-    return F, all_nodes, max_level, levels
+    return F, all_nodes, max_level, levels, root_degree, max_degree
+
+def write_FFP_file(dimension, edges, coords, fire, output_path):
+    with open(output_path, "w") as writer:
+        writer.write("DIMENSION: {}\n".format(dimension))
+        writer.write("FIRE_START: {}\n".format(fire))
+        writer.write("FIREFIGHTER: {}\n".format(dimension))
+
+        # coord display
+        writer.write("DISPLAY_DATA_SECTION\n")
+        for i in range(dimension + 1):
+            coord = coords[i]
+            writer.write("{} {} {}\n".format(i, coord[0], coord[1]))
+
+        # edge section
+        writer.write("EDGE_SECTION\n")
+        for e in edges:
+            writer.write("{} {}\n".format(e[0], e[1]))
+
+def write_FFP_summary(instance, output_file):
+    with open(output_file, "w") as writer:
+        writer.write("TREE SEED: {}\n".format(instance["seed"]))
+        writer.write("DIMENSION: {}\n".format(instance["N"]))
+        writer.write("FIRE_START: {}\n".format(instance["start_fire"]))
+        writer.write("FIREFIGHTER: {}\n".format(instance["N"]))
+        writer.write("DELTA: {}\n".format(instance["delta"]))
+        writer.write("ROOT DEGREE: {}\n".format(instance["root_degree"]))
+        writer.write("MAX DEGREE: {}\n".format(instance["max_degree"]))
+        writer.write("TREE HEIGHT: {}\n".format(instance["tree_height"]))
+        writer.write("SCALE_DISTANCE: {}\n".format(instance["scale"]))
 
 
 def DrawingInstance(layout, T, fire, N, path, file):
@@ -239,10 +270,12 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         # Tree() is a function in 'ete3' library with Newick format.
         F = Tree()
 
+        #TODO: Instance Generator does not need to generate Tree
+
         # Construct Tree structures
-        F, all_nodes, max_level, levels = TreeConstruct(F, all_nodes, T, starting_fire)
-        time = max_level * env_update  # Budget Time before Tree burns entirely
-        max_budget = max_level * env_update  # Max budget of time
+        F, all_nodes, max_level, levels, root_degree, max_degree = TreeConstruct(F, all_nodes, T, starting_fire)
+        # time = max_level * env_update  # Budget Time before Tree burns entirely
+        # max_budget = max_level * env_update  # Max budget of time
 
 
         nx.write_adjlist(T, instance_path +'MFF_Tree.adjlist')  # Saving Full Distance Matrix
@@ -255,6 +288,11 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         instance['start_fire'] = int(starting_fire)
         instance['a_pos_x'] = int(a_x_pos)
         instance['a_pos_y'] = int(a_y_pos)
+        instance['tree_height'] = max_level
+        instance['root_degree'] = root_degree
+        instance['max_degree'] = max_degree
+        # Initial distance between agent position and fire ignition
+        instance['delta'] = T_Ad[starting_fire][N]
         logger.log_save(instance)
 
         # Save position layout as .json file
@@ -265,10 +303,18 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
             layout_file.write(json.dumps(pos))
         layout_file.close()
 
+        # File created for Backtracking Algorithm
+        output_file = instance_path + "BCKTRCK.mfp"
+        write_FFP_file(n_nodes, T.edges(), pos, starting_fire, output_file)
+
+        # CREATE A SUMMARY FILE FOR EACH INSTANCE
+        output_file = instance_path + "SUMMARY.mfp"
+        write_FFP_summary(instance, output_file)
+
         # Create Additional config array due to environments differences
-        Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
+        #Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
 
         # Create Plotting array containing drawing variables
-        Plotting = [T, pos, burnt_nodes, remaining_nodes, N, instance_path + file + '/', levels, saved_nodes]
+        #Plotting = [T, pos, burnt_nodes, remaining_nodes, N, instance_path + file + '/', levels, saved_nodes]
 
-        # return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config, Plotting
+        #return [initial_pos, initial_pos], all_nodes, F, time, max_budget, Config, Plotting, pos

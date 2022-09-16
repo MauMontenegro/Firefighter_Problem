@@ -125,10 +125,8 @@ if __name__ == '__main__':
     exp_config['experiment']['Env_Update'] = 1
     exp_config['experiment']['env_type'] = 'rnd_tree'
     exp_config['experiment']['env_metric'] = 'metric'
-    exp_config['experiment']['scale'] = 1
+    exp_config['experiment']['scale'] = 10
     exp_config['experiment']['instances'] = N
-
-
 
     c = 0
     for n_nodes in grid:
