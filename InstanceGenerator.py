@@ -125,8 +125,14 @@ if __name__ == '__main__':
     exp_config['experiment']['Env_Update'] = 1
     exp_config['experiment']['env_type'] = 'rnd_tree'
     exp_config['experiment']['env_metric'] = 'metric'
-    exp_config['experiment']['scale'] = 10
     exp_config['experiment']['instances'] = N
+
+    # Configurable parameters for experiments
+    exp_config['experiment']['scale'] = 5
+    exp_config['experiment']['root_degree'] = 1
+    # [A,B] We want agent at a distance between A% - B% of total scale
+    exp_config['experiment']['delta'] = [.50,.75]
+    ############################################
 
     c = 0
     for n_nodes in grid:
@@ -144,4 +150,4 @@ if __name__ == '__main__':
         # Create instances with configuration and specific rnd_generators
         input = rndtree_metric(exp_config, node_path, file, n_nodes, batch_generators)
 
-        c+=1
+        c += 1
