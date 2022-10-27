@@ -163,8 +163,8 @@ if __name__ == '__main__':
             start = tm.time()
             max_saved_trees, Hash_Calls, Sol = solver(agent_pos, all_nodes, F, time, time, 0, T_Ad_Sym, 0)
             end = tm.time()
-            t = (end - start) * 1000
-            print("time elapsed {} milli seconds".format(t))
+            t = (end - start)
+            print("time elapsed {} seconds".format(t))
             peak = tracing_mem()
             # -----------------------------------------------------------------------------------------------------------
 

@@ -98,7 +98,7 @@ if __name__ == '__main__':
     rnd_generators, sq, grid, N, n_seeds, exp_selected = Generator.Create()
 
     # Si se crea un nuevo experimento guardar semilla y parámetros
-    if args.load in ('no', 'false', 'f', 'n', '0'):
+    if args.load in ('no', 'false', 'f', 'n', '0','False'):
         exp_string = str(n_seeds) + " " + str(sq.entropy) + " " +  str(grid) + " " + str(N) + "\n"
         fle = Path('Experiments/Seeds')
         fle.touch(exist_ok=True)
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     exp_config['experiment']['instances'] = N
 
     # Configurable parameters for experiments
-    exp_config['experiment']['scale'] = 5
+    exp_config['experiment']['scale'] = 10
     exp_config['experiment']['root_degree'] = 1
     # [A,B] We want agent at a distance between A% - B% of total scale
     exp_config['experiment']['delta'] = [.50,.75]
