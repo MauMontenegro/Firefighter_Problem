@@ -5,13 +5,10 @@ from matplotlib import pyplot as plt
 import json
 from pathlib import Path
 from ete3 import Tree
-
-
 # Performance Measures
 import tracemalloc
 import time as tm
 import os
-
 from dynaff import setupExperiment, getExpConfig
 from dynaff.utilities import utils
 from dynaff.inputs.rndtree_metric import TreeConstruct
@@ -82,6 +79,7 @@ def Statistics(path,total_saved,total_times):
     time_std_dv=[]
     saved_mean = []
     saved_std_dv = []
+
     # Statistics for run time
     for node_size in total_times:
         m = np.mean(node_size)
@@ -100,16 +98,13 @@ def Statistics(path,total_saved,total_times):
     saved_std_dv=np.asarray(saved_std_dv)
     saved_mean=np.asarray(saved_mean)
 
-    time_mean=np.asarray(time_mean)
-    time_std_dv=np.asarray(time_std_dv)
-
     print(saved_mean)
     print(saved_std_dv)
 
 
     np.save(path / "Statistics_DP", np.array([saved_mean, saved_std_dv, time_mean, time_std_dv]))
-    y= np.arange(0,len(time_mean), 1, dtype=int)
-    fig, ax =plt.subplots(1)
+    y= np.arange(0, len(time_mean), 1, dtype=int)
+    fig, ax = plt.subplots(1)
     ax.plot(y,saved_mean, label="Mean saved Vertices",color="blue")
     ax.fill_between(y, saved_mean+saved_std_dv/2,saved_mean-saved_std_dv/2,facecolor="blue",alpha=0.5)
     plt.savefig(path / 'DP_Saved.png')
@@ -165,8 +160,8 @@ if __name__ == '__main__':
             start = tm.time()
             max_saved_trees, Hash_Calls, Sol = solver(agent_pos, all_nodes, F, time, time, 0, T_Ad_Sym, 0)
             end = tm.time()
-            t = (end - start) * 1000
-            print("time elapsed {} milli seconds".format(t))
+            t = (end - start)
+            print("time elapsed {} seconds".format(t))
             peak = tracing_mem()
             # -----------------------------------------------------------------------------------------------------------
 

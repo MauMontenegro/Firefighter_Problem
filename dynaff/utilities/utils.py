@@ -140,6 +140,9 @@ def SavedNodes(t, cutting_node, Valid_):
 
     return saved
 
+#def SavedNodesbackTrack(Graph,node,Valids):
+    #for descendant in nx.descendants(Graph,node):
+
 def Compute_Total_Saved(all_nodes, T):
     for node in all_nodes:
         saved = 1

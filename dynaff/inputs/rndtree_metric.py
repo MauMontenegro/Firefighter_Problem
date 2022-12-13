@@ -5,6 +5,8 @@ import json
 import os
 import networkx as nx
 
+# Visualization
+from pyvis.network import Network
 
 class ExperimentLog:
     """
@@ -163,6 +165,9 @@ def DrawingInstance(layout, T, fire, N, path, file):
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     plt.legend(loc="lower left", ncol=1, bbox_to_anchor=(1, 0.5), labelspacing=1)
     plt.title(title_label)
+    #nt=Network('500px', '500px')
+    #nt.from_nx(T)
+    #nt.show('nx.html')
 
     # Plotting and saving Image
     file_path = path + file + '.png'
@@ -201,28 +206,34 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         Plotting: Array containing drawing config
     """
     for instance in range(config['experiment']['instances']):
-        # Create Instance Specific Folder
-        instance_path = path + "Instance_" + str(instance) + "/"
-
-        N = n_nodes  # Number of Nodes
+        instance_path = path + "Instance_" + str(instance) + "/" # Create Instance Specific Folder
+        N = n_nodes
         n_instances = config['experiment']['instances'] # Number of instances per Node Size
         scale = config['experiment']['scale']  # Edge distance scale
+        r_degree = config['experiment']['root_degree']  # Force Tree to have a root degree of this size
         env_update = config['experiment']['Env_Update']  # Update ratio of environment respect to agent
+        delta = config['experiment']['delta']
 
         # Random Variables. Use rnd_generator specific to each instance.
+        # Generate Only Trees with fire root node with desired degree
         starting_fire = rnd_generators[instance].integers(0, N - 1)
-        a_x_pos = rnd_generators[instance].uniform(-1, 1) * scale
-        a_y_pos = rnd_generators[instance].uniform(-1, 1) * scale
-        tree_seed = rnd_generators[instance].integers(2**32-1)
-        T = nx.random_tree(n=N, seed = int(tree_seed))
-        pos = nx.spring_layout(T, seed = int(tree_seed))  # Use a spring layout to draw nodes
+        rootd_check = True
+        while rootd_check:
+            tree_seed = rnd_generators[instance].integers(2 ** 32 - 1)
+            T = nx.random_tree(n=N, seed=int(tree_seed))
+            pos = nx.spring_layout(T, seed=int(tree_seed),scale=scale)  # Use a spring layout to draw nodes
+            if T.degree[starting_fire] == r_degree:
+                rootd_check = False
+        # Limit agent distance from root
+        limit_agent_radius_inf = delta[0] * scale
+        limit_agent_radius_sup = delta[1] * scale
 
         # Needed Structures
         T_Ad = np.zeros((N + 1, N + 1))  # Adjacency Matrix that contains distances for all nodes including agent
         all_nodes = {}  # Dictionary to store all nodes
         saved_nodes = []  # Array of saved nodes for Drawing
         initial_pos = N  # Put agent as last node in Graph
-        instance = {}  # dictionary to save instance parameters
+        instance_ = {}  # dictionary to save instance parameters
 
         # Save Instance
         logger = ExperimentLog(instance_path, 'instance_info')  # Create Logger Class to store instance parameters
@@ -237,13 +248,18 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
                     x_2 = pos[column][0]
                     y_1 = pos[row][1]
                     y_2 = pos[column][1]
-                    dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-                    T_Ad[row][column] = dist * scale
+                    T_Ad[row][column] = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
 
-        # Scale Position in Layout for coherence between plotting and matrix distances
-        for element in pos:
-            pos[element][0] = pos[element][0] * scale
-            pos[element][1] = pos[element][1] * scale
+        # Force agent to be at limit distance from ignition vertex
+        ref_x, ref_y = pos[starting_fire][0],pos[starting_fire][1]  # Get ignition vertex position reference
+        x_offset = rnd_generators[instance].uniform(limit_agent_radius_inf, limit_agent_radius_sup)
+        if rnd_generators[instance].random() < 0.5:
+            x_offset = x_offset * -1
+        y_offset = rnd_generators[instance].uniform(limit_agent_radius_inf, limit_agent_radius_sup)
+        if rnd_generators[instance].random() < 0.5:
+            y_offset = y_offset * -1
+        a_x_pos = ref_x + x_offset
+        a_y_pos = ref_y + y_offset
 
         # Adding Agent Node to Full Adjacency Matrix (Agent is added to last row and column 'N')
         for node in range(0, N):
@@ -251,8 +267,7 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
             x_2 = a_x_pos
             y_1 = pos[node][1]
             y_2 = a_y_pos
-            dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-            T_Ad[node][N] = dist
+            T_Ad[node][N] = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
 
         # Create a Symmetric Matrix with upper part of T_Ad (For symmetric distances)
         T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)
@@ -282,18 +297,18 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         np.save(instance_path + "FDM_MFFP.npy", T_Ad_Sym)  # Saving Numpy array full distance matrix
 
         # Instance Variables
-        instance['N'] = N
-        instance['seed'] = int(tree_seed)
-        instance['scale'] = scale
-        instance['start_fire'] = int(starting_fire)
-        instance['a_pos_x'] = int(a_x_pos)
-        instance['a_pos_y'] = int(a_y_pos)
-        instance['tree_height'] = max_level
-        instance['root_degree'] = root_degree
-        instance['max_degree'] = max_degree
+        instance_['N'] = N
+        instance_['seed'] = int(tree_seed)
+        instance_['scale'] = scale
+        instance_['start_fire'] = int(starting_fire)
+        instance_['a_pos_x'] = int(a_x_pos)
+        instance_['a_pos_y'] = int(a_y_pos)
+        instance_['tree_height'] = max_level
+        instance_['root_degree'] = root_degree
+        instance_['max_degree'] = max_degree
         # Initial distance between agent position and fire ignition
-        instance['delta'] = T_Ad[starting_fire][N]
-        logger.log_save(instance)
+        instance_['delta'] = T_Ad[starting_fire][N]
+        logger.log_save(instance_)
 
         # Save position layout as .json file
         # .json file need a list format ot save
@@ -309,7 +324,7 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
 
         # CREATE A SUMMARY FILE FOR EACH INSTANCE
         output_file = instance_path + "SUMMARY.mfp"
-        write_FFP_summary(instance, output_file)
+        write_FFP_summary(instance_, output_file)
 
         # Create Additional config array due to environments differences
         #Config = [config['experiment']['env_type'], config['experiment']['env_metric'], T_Ad_Sym]
