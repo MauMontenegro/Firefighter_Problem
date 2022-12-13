@@ -5,13 +5,10 @@ from matplotlib import pyplot as plt
 import json
 from pathlib import Path
 from ete3 import Tree
-
-
 # Performance Measures
 import tracemalloc
 import time as tm
 import os
-
 from dynaff import setupExperiment, getExpConfig
 from dynaff.utilities import utils
 from dynaff.inputs.rndtree_metric import TreeConstruct

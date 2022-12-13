@@ -206,10 +206,8 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         Plotting: Array containing drawing config
     """
     for instance in range(config['experiment']['instances']):
-        # Create Instance Specific Folder
-        instance_path = path + "Instance_" + str(instance) + "/"
-
-        N = n_nodes  # Number of Nodes
+        instance_path = path + "Instance_" + str(instance) + "/" # Create Instance Specific Folder
+        N = n_nodes
         n_instances = config['experiment']['instances'] # Number of instances per Node Size
         scale = config['experiment']['scale']  # Edge distance scale
         r_degree = config['experiment']['root_degree']  # Force Tree to have a root degree of this size
@@ -217,15 +215,16 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         delta = config['experiment']['delta']
 
         # Random Variables. Use rnd_generator specific to each instance.
-        # Generate Only Trees with starting fire node with desired degree
+        # Generate Only Trees with fire root node with desired degree
         starting_fire = rnd_generators[instance].integers(0, N - 1)
         rootd_check = True
         while rootd_check:
             tree_seed = rnd_generators[instance].integers(2 ** 32 - 1)
             T = nx.random_tree(n=N, seed=int(tree_seed))
-            pos = nx.spring_layout(T, seed=int(tree_seed))  # Use a spring layout to draw nodes
+            pos = nx.spring_layout(T, seed=int(tree_seed),scale=scale)  # Use a spring layout to draw nodes
             if T.degree[starting_fire] == r_degree:
                 rootd_check = False
+        # Limit agent distance from root
         limit_agent_radius_inf = delta[0] * scale
         limit_agent_radius_sup = delta[1] * scale
 
@@ -249,13 +248,7 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
                     x_2 = pos[column][0]
                     y_1 = pos[row][1]
                     y_2 = pos[column][1]
-                    dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-                    T_Ad[row][column] = dist * scale
-
-        # Scale Position in Layout for coherence between plotting and matrix distances
-        for element in pos:
-            pos[element][0] = pos[element][0] * scale
-            pos[element][1] = pos[element][1] * scale
+                    T_Ad[row][column] = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
 
         # Force agent to be at limit distance from ignition vertex
         ref_x, ref_y = pos[starting_fire][0],pos[starting_fire][1]  # Get ignition vertex position reference
@@ -268,15 +261,13 @@ def rndtree_metric(config, path, file, n_nodes, rnd_generators):
         a_x_pos = ref_x + x_offset
         a_y_pos = ref_y + y_offset
 
-
         # Adding Agent Node to Full Adjacency Matrix (Agent is added to last row and column 'N')
         for node in range(0, N):
             x_1 = pos[node][0]
             x_2 = a_x_pos
             y_1 = pos[node][1]
             y_2 = a_y_pos
-            dist = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
-            T_Ad[node][N] = dist
+            T_Ad[node][N] = np.sqrt((x_1 - x_2) ** 2 + (y_1 - y_2) ** 2)
 
         # Create a Symmetric Matrix with upper part of T_Ad (For symmetric distances)
         T_Ad_Sym = np.triu(T_Ad) + np.tril(T_Ad.T)

@@ -8,41 +8,48 @@ from pathlib import Path
 
 
 class CreateGenerators:
+    """
+    Create Random Number Generators
+
+    :param N: Number of Instances generated
+    :param Load: Selection fLag for load on experiment or create one
+    :param grid: Array of Total Tree Nodes [10 20 30]
+    :param n_seeds: Number of existing experiment seeds
+    :param exp_selected: Selected Experiment
+    """
     def __init__(self, grid, N, Load, defpath=None):
-        self.N = N # Instances per Node Size
-        self.Load = Load # Load seed of Experiment or Create a new one
-        self.grid = grid # Tree Node size
-        self.n_seeds = 0 # counter for total experiment seeds already created
+        self.N = N
+        self.Load = Load
+        self.grid = grid
+        self.n_seeds = 0
         self.exp_selected = 0
 
-        # If not Load, then generate a Seed_Sequence with  default entropy
+        if defpath is None:
+            path = Path.cwd() / 'Experiments' / "Seeds"
+        else:
+            path=Path(defpath)
+
+        # Generate a Seed_Sequence with  default entropy
         if self.Load in ('no', 'false', 'f', 'n', '0'):
             self.rnd_sq = np.random.SeedSequence()
-            with open("Experiments/Seeds", 'r') as fp:
+            with open(path, 'r') as fp:
                 self.n_seeds = len(fp.readlines())
             print("Generating New Seed Sequence: {s}".format(s=self.rnd_sq.entropy))
-        # If we want to load a seed, then select from current seed directory to reproduce experiment
+        # Select from current seed directory to reproduce experiment
         else:
             print("Loading a Seed Sequence")
-            if defpath is None:
-                path = Path.cwd() / 'Experiments'
-            else:
-                path = Path(defpath)
-            pathFile = path / "Seeds"
-            if not pathFile.exists() or not pathFile.is_file():
+            if not path.exists() or not path.is_file():
                 raise ValueError('Experiment Path either does not exists or is not a File')
-
-            file = open(pathFile, 'rt')
+            file = open(path, 'rt')
+            # Display Seeds with their selection index
             f = file.readlines()
-
             for line in f:
                 print(line)
                 self.n_seeds += 1
             file.close()
 
             while True:
-                select = input("Insert index of desired seed to reproduce experiment: ")
-                select = int(select)
+                select = int(input("Insert index for desired seed to reproduce experiment: "))
                 self.exp_selected = select
                 if select >= 0 and select < self.n_seeds:
                     break
@@ -53,17 +60,13 @@ class CreateGenerators:
             self.N = int(f[select].split()[3])
             self.rnd_sq = np.random.SeedSequence(int(f[select].split()[1]))
 
-        # Convert grid string (for load or not)
         grid_ = [int(element) for element in self.grid.split(",")]
         self.experiments = len(grid_)
-        # Calculate number of instances to generate Generators
         self.total_instances = self.experiments * self.N
 
     def Create(self):
-        # Spawn children for every instance
-        children = self.rnd_sq.spawn(self.total_instances)
-        # Create default generators for each instance
-        generators = [np.random.default_rng(s) for s in children]
+        children = self.rnd_sq.spawn(self.total_instances)          # Spawn children for every instance
+        generators = [np.random.default_rng(s) for s in children]   # Create default generators for each instance
         return generators, self.rnd_sq, self.grid, self.N, self.n_seeds, self.exp_selected
 
 
@@ -74,7 +77,7 @@ def argParser(args):
             Generate Experiment Instances or Load a seed to reproduce 
             previously created instances.
             ''',
-        epilog='''python InstanceGenerator.py -l False -g 10,20,30,40 -s 5'''
+        epilog='''python InstanceGenerator.py -l f -g 10,20,30,40 -s 5'''
     )
 
     parser.add_argument(
@@ -91,22 +94,23 @@ def argParser(args):
 
 
 if __name__ == '__main__':
-    # Get input arguments
     args = argParser(sys.argv[:])
-    # Instance Random Seed Generators
     Generator = CreateGenerators(args.grid, args.size, args.load)
     rnd_generators, sq, grid, N, n_seeds, exp_selected = Generator.Create()
 
-    # Si se crea un nuevo experimento guardar semilla y parámetros
+    # Create New Experiment and save seed for reproducibility
     if args.load in ('no', 'false', 'f', 'n', '0','False'):
+        # Experiment save example: [5   3435464535  10,20,30    10]
         exp_string = str(n_seeds) + " " + str(sq.entropy) + " " +  str(grid) + " " + str(N) + "\n"
         fle = Path('Experiments/Seeds')
+        # Create seed file if not exist
         fle.touch(exist_ok=True)
+        # Write Experiment string
         seeds_file = open(fle,'a')
         seeds_file.write(exp_string)
         seeds_file.close()
         # Create Master Experiment Path if is new
-        n_experiments = len(next(os.walk('Experiments'))[1])
+        n_experiments = len(next(os.walk('Experiments'))[1]) # Get number of next number of experiment
         master_path = "Experiments/Experiment_" + str(n_experiments)
         if os.path.exists(master_path) == False:
             os.mkdir(master_path)
@@ -116,38 +120,28 @@ if __name__ == '__main__':
             os.mkdir(master_path)
 
 
-    # Convert grid str to an array
+    # Convert grid string to array
     grid = [int(element) for element in grid.split(",")]
 
-    # Save experiment Configuration parameters
+    # Experiment Environment Parameters
     exp_config = {}
     exp_config['experiment'] = {}
-    exp_config['experiment']['Env_Update'] = 1
     exp_config['experiment']['env_type'] = 'rnd_tree'
     exp_config['experiment']['env_metric'] = 'metric'
     exp_config['experiment']['instances'] = N
-
-    # Configurable parameters for experiments
-    exp_config['experiment']['scale'] = 10
+    # Configurable Experiment Parameters
+    exp_config['experiment']['scale'] = 1
     exp_config['experiment']['root_degree'] = 1
-    # [A,B] We want agent at a distance between A% - B% of total scale
-    exp_config['experiment']['delta'] = [.50,.75]
+    exp_config['experiment']['Env_Update'] = 1
+    exp_config['experiment']['delta'] = [.50,.75]  # [A,B] We want agent at a distance between A% - B% of total scale
     ############################################
-
     c = 0
+    # Create N instances for each Tree Size Experiment in Grid
     for n_nodes in grid:
-        # Create node_size folder
         node_path = master_path + "/" + 'Size_' + str(n_nodes) + '/'
         if not os.path.exists(node_path):
             os.mkdir(node_path)
-
-        # Image name file
         file = 'img_' + str(n_nodes)
-
-        # Partition Generators total/N
-        batch_generators = rnd_generators[c:c + N]
-
-        # Create instances with configuration and specific rnd_generators
+        batch_generators = rnd_generators[c:c + N] # Partition Generators total/N
         input = rndtree_metric(exp_config, node_path, file, n_nodes, batch_generators)
-
-        c += 1
+        c += N
