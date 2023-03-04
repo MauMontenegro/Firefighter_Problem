@@ -5,6 +5,8 @@ from matplotlib import pyplot as plt
 import json
 from pathlib import Path
 from ete3 import Tree
+import networkx as nx
+
 # Performance Measures
 import tracemalloc
 import time as tm
@@ -153,12 +155,16 @@ if __name__ == '__main__':
             F = Tree()                                  # Tree in ete3 form
             all_nodes = {}                              # Node Dictionary
             F, all_nodes, max_level, levels, _, _ = TreeConstruct(F, all_nodes, T, starting_fire)
-
+            # Get node Levels
+            levels_ = nx.single_source_shortest_path_length(T, starting_fire)
+            nx.set_node_attributes(T, levels_, "levels")
+            marked_list=[0] * T.number_of_nodes()
+            nx.set_node_attributes(T, marked_list, "marked")
             # CALL THE SOLVER (THIS IS THE WHERE WE CALL THE DYNAMIC PROGRAMMING FUNCTION)
             # ----------------------------------------------------------------------------------------------------------
             tracing_start()
             start = tm.time()
-            max_saved_trees, Hash_Calls, Sol = solver(agent_pos, all_nodes, F, time, time, 0, T_Ad_Sym, 0)
+            max_saved_trees, Hash_Calls, Sol = solver(agent_pos, all_nodes, F, time, time, 0, T_Ad_Sym, 0, T)
             end = tm.time()
             t = (end - start)
             print("time elapsed {} seconds".format(t))

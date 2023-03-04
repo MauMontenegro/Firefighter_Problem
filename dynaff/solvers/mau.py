@@ -281,10 +281,22 @@ def ms_heuristic(a_pos, nodes, F, time, max_budget, hash_calls, config, recursio
 
     return saved, 0, [solution, time_travel, fireline]
 
-def backtrackSolver(apos, Tree, time, max_budget, nodes, dist_matrix):
+import networkx as nx
+import matplotlib.pyplot as plt
+def backtrackSaved(T,saved_node,valid_nodes):
+    #Get Succesors of saved_node
+    succesors = nx.descendants(T,int(saved_node))
+    for i in succesors:
+        if T.node[i]["marked"]==0:
+            if i in valid_nodes:
+                valid_nodes.pop(int(i))
+    saved = len(succesors) + 1
+    return saved
+
+def backtrackSolver(a_pos, nodes, time, max_budget, hash_calls, dist_matrix, recursion, T):
     """
     Find Solution by backtracking nodes.
-    :param apos:
+    :param apos: Agent position
     :param Tree:
     :param time:
     :param max_budget:
@@ -293,54 +305,55 @@ def backtrackSolver(apos, Tree, time, max_budget, nodes, dist_matrix):
     :return:
     """
     # Compute Feasible Nodes
+
     Valid = {}
     for node in nodes:
-        if Feasible(node, apos, time, nodes[node]['level'], max_budget, dist_matrix):
+        if Feasible(node, a_pos, time, nodes[node]['level'], max_budget, dist_matrix):
             Valid[node] = {}
             Valid[node]['level'] = nodes[node]['level']
 
-        # Traverse Valid node list and compute his value by recurrence
-        for valid_node in Valid:
+    saved = 0
+    pbar = 0
+    # Progress Bar Creation
+    if recursion == 0:
+        pbar = tqdm(total=len(Valid))
 
-            # Copy of Tree and Valid list to send in following recurrence
-            F_copy = Tree.copy()
+    print(Valid)
+    # Traverse Valid node list and compute his value by recurrence
+    for valid_node in Valid:
+        if recursion == 0:
+            pbar.update(1)
 
-            # In metric distance envs like "caenv", only send to the following recurrence a copy of 'Valid'
-            # cause once a node is invalid due delta_time from agent position it never will be valid again.
-            # When there are no metric distance envs, like "rndtree", we send all nodes in actual forest (except pruned)
-            Valid_copy = Valid.copy()
+        Valid_copy = Valid.copy()
+        # This node will be pruned, so next iter will not ve valid(metric or no metric distances)
+        Valid_copy.pop(valid_node)
+        # Compute Saved Nodes and prune Tree, also modify the next list of valid nodes (deleting pruned nodes)
+        #saved = utils.SavedNodes(F_copy, valid_node, Valid_copy)
+        saved = backtrackSaved(T,valid_node,Valid_copy)
+        # Compute Remaining Time if agent travel to this Valid node
+        t_ = time - utils.ComputeTime(a_pos, valid_node, dist_matrix)
+        # New agent position moves to node position
+        n_x = valid_node
+        # Solve next sub-problem
+        value, h = dpsolver_mau(n_x, Valid_copy, t_, max_budget, h, dist_matrix, recursion + 1, T)
+        # Assign Valid Node value by his returning best value + is current saved trees
+        Valid[valid_node]['value'] = value + saved
 
-            # This node will be pruned, so next iter will not ve valid(metric or no metric distances)
-            Valid_copy.pop(valid_node)
+    # Once all valid nodes values are computed then calculate the best (max) and store in current key
+    # along with the node or position that belongs to that value
+    if Valid:
+        max_value = max(int(d['value']) for d in Valid.values())
+        max_key_node = max(Valid, key=lambda v: Valid[v]['value'])
+        Hash[key]['max_node'] = max_key_node
+        Hash[key]['value'] = max_value
+        if recursion == 0:  # We already do all the recursions
+            return max_value, h, Hash
+        return max_value, h
+    # If there are no valid nodes for current key then only return saved trees
+    else:
+        Hash[key]['value'] = saved
+        if recursion == 0:
+            return saved, h, Hash
+        return saved, h
 
-            # Compute Saved Nodes and prune Tree, also modify the next list of valid nodes (deleting pruned nodes)
-            saved = utils.SavedNodes(F_copy, valid_node, Valid_copy)
 
-            # Compute Remaining Time if agent travel to this Valid node
-            t_ = time - utils.ComputeTime(a_pos, valid_node, dist_matrix)
-
-            # New agent position moves to node position
-            n_x = valid_node
-
-            # Solve next sub-problem
-            value, h = dpsolver_mau(n_x, Valid_copy, F_copy, t_, max_budget, h, dist_matrix, recursion + 1)
-
-            # Assign Valid Node value by his returning best value + is current saved trees
-            Valid[valid_node]['value'] = value + saved
-
-        # Once all valid nodes values are computed then calculate the best (max) and store in current key
-        # along with the node or position that belongs to that value
-        if Valid:
-            max_value = max(int(d['value']) for d in Valid.values())
-            max_key_node = max(Valid, key=lambda v: Valid[v]['value'])
-            Hash[key]['max_node'] = max_key_node
-            Hash[key]['value'] = max_value
-            if recursion == 0:  # We already do all the recursions
-                return max_value, h, Hash
-            return max_value, h
-        # If there are no valid nodes for current key then only return saved trees
-        else:
-            Hash[key]['value'] = saved
-            if recursion == 0:
-                return saved, h, Hash
-            return saved, h
