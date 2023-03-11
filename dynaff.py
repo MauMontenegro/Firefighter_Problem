@@ -4,13 +4,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 import json
 from pathlib import Path
-from ete3 import Tree
-import networkx as nx
-
-# Performance Measures
 import tracemalloc
 import time as tm
 import os
+
+from ete3 import Tree
+import networkx as nx
+
 from dynaff import setupExperiment, getExpConfig
 from dynaff.utilities import utils
 from dynaff.inputs.rndtree_metric import TreeConstruct
@@ -52,7 +52,7 @@ def argParser(args):
             -Cellular Automata Environment (caenv)
             -Random Tree (rndtree)
             ''',
-        epilog='''python dynaff.py -s dpsolver_mau -i rndtree -e experiment_name'''
+        epilog='''python dynaff.py -s dpsolver -i rndtree -e experiment_name'''
     )
 
     parser.add_argument(
@@ -67,8 +67,9 @@ def argParser(args):
 
     return parser.parse_known_args(args)[0]
 
-def saveSolution(instance_path,instance,solution,saved,time,hash_calls,hash_size):
-    output_path = instance_path / instance / "Solution_Summary_DP"
+def saveSolution(instance_path,instance,solution,saved,time,hash_calls,hash_size,solver_name):
+    summary_name=solver_name + "_summary"
+    output_path = instance_path / instance / summary_name
     with open(output_path, "w") as writer:
         writer.write("Solution: {}\n".format(solution))
         writer.write("Saved: {}\n".format(saved))
@@ -117,25 +118,27 @@ def Statistics(path,total_saved,total_times):
     plt.savefig(path / 'DP_Time.png')
 
 if __name__ == '__main__':
-    # Get input arguments and handle missing values
+    #Get input arguments and handle missing values
     args = argParser(sys.argv[:])
     if args.solver == None:
         raise argparse.ArgumentTypeError('No solver selected')
     if args.experiment == None:
         raise argparse.ArgumentTypeError('No Experiment folder selected')
-    # Store path for experiment
+    if args.input == None:
+        raise argparse.ArgumentTypeError('No input selected')
+
+    #Experiment path
     path = Path.cwd() / "Experiments" / str(args.experiment)
     # Get Solver Function and Input Manager Function
     input_manager, solver = setupExperiment(args.input, args.solver)
 
-    # Variables to store saved vertices and runtime per Tree Size
     total_times=[]
     total_saved=[]
-
     size_dirs = []
     for d in next(os.walk(path)):
         size_dirs.append(d)
     size_dirs = sorted(size_dirs[1])
+
     # Traverse for each Tree Size experiments
     for dir in size_dirs:
         instance_path = path / str(dir)
@@ -158,39 +161,36 @@ if __name__ == '__main__':
             # Get node Levels
             levels_ = nx.single_source_shortest_path_length(T, starting_fire)
             nx.set_node_attributes(T, levels_, "levels")
-            marked_list=[0] * T.number_of_nodes()
+            marked_list = [0] * T.number_of_nodes()
             nx.set_node_attributes(T, marked_list, "marked")
-            # CALL THE SOLVER (THIS IS THE WHERE WE CALL THE DYNAMIC PROGRAMMING FUNCTION)
+            # CALL THE SOLVER
             # ----------------------------------------------------------------------------------------------------------
             tracing_start()
             start = tm.time()
-            max_saved_trees, Hash_Calls, Sol = solver(agent_pos, all_nodes, F, time, time, 0, T_Ad_Sym, 0, T)
+            max_saved_trees, Sol = solver(agent_pos, all_nodes, time, time, 0, T_Ad_Sym, 0, T)
             end = tm.time()
             t = (end - start)
             print("time elapsed {} seconds".format(t))
             peak = tracing_mem()
             # -----------------------------------------------------------------------------------------------------------
-
             # Just Printing Results
             print("\nForest with:{n} nodes".format(n=len(all_nodes)))
             print("Max saved Trees:{t}".format(t=max_saved_trees))
-            print("Hash Repeated Calls:{h}".format(h=Hash_Calls))
+            #print("Hash Repeated Calls:{h}".format(h=Hash_Calls))
             print("Hash Table has {l} different Forest Conditions".format(l=len(Sol)))
-
             # Retrieve Solution Strategy
-            if args.solver == "dpsolver_mau":
+            if args.solver == "dpsolver_mau": # Dynamic Programming
                 Sol = utils.Find_Solution(F, time, agent_pos, Sol, T_Ad_Sym)
                 Sol.insert(0, str(N))
-                print("\nSolution Node Sequence: {s}".format(s=Sol))
-            if args.solver == "hd_heuristic" or args.solver == "ms_heuristic":
-                print("\nSolution: {s}".format(s=Sol[0]))
-                print("\nTime elapsed by step: {s}".format(s=Sol[1]))
-                print("\nFireline Level: {s}".format(s=Sol[2]))
+                print("\nSolution Sequence: {s}".format(s=Sol))
+            if args.solver == "hd_heuristic" or args.solver == "ms_heuristic": # Heuristics
+                print("\n Solution: {s}".format(s=Sol[0]))
+                print("\n Time elapsed by step: {s}".format(s=Sol[1]))
+                print("\n Fireline Level: {s}".format(s=Sol[2]))
                 # utils.graphSolution(Sol, plotting)
-
+            Hash_Calls = 0
             # Saving stats for general parameters
-            saveSolution(instance_path, inst, Sol, max_saved_trees, t, Hash_Calls, len(Sol))
-
+            saveSolution(instance_path, inst, Sol, max_saved_trees, t, Hash_Calls, len(Sol),args.solver)
             # Saved nodes per Graph
             saved_p_nodes.append(max_saved_trees)
             t_p_nodes.append(t)
