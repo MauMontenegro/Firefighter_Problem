@@ -85,7 +85,7 @@ def argParser(args):
         help="Load Experiments or Create New One")
     parser.add_argument(
         '--grid', '-g', type=str,
-        help="Grid of experiment node sizes for Tree")
+        help="Set of experiments Tree size")
     parser.add_argument(
         '--size', '-s', type=int,
         help="Number o instances for each node size")
@@ -130,10 +130,10 @@ if __name__ == '__main__':
     exp_config['experiment']['env_metric'] = 'metric'
     exp_config['experiment']['instances'] = N
     # Configurable Experiment Parameters
-    exp_config['experiment']['scale'] = 1
-    exp_config['experiment']['root_degree'] = 1
+    exp_config['experiment']['scale'] = 7
+    exp_config['experiment']['root_degree'] = 3
     exp_config['experiment']['Env_Update'] = 1
-    exp_config['experiment']['delta'] = [.50,.75]  # [A,B] We want agent at a distance between A% - B% of total scale
+    exp_config['experiment']['delta'] = [.25,.50]  # [A,B] We want agent at a distance between A% - B% of total scale
     ############################################
     c = 0
     # Create N instances for each Tree Size Experiment in Grid

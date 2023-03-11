@@ -1,3 +1,4 @@
-from dynaff.solvers.mau import dpsolver_mau
-from dynaff.solvers.mau import hd_heuristic
-from dynaff.solvers.mau import ms_heuristic
+from dynaff.solvers.solver import dpsolver
+from dynaff.solvers.solver import hd_heuristic
+from dynaff.solvers.solver import ms_heuristic
+from dynaff.solvers.solver import backtrackSolver

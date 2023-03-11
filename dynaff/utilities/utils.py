@@ -4,31 +4,34 @@ import numpy as np
 import os
 import json
 
-def ComputeTime(a_pos, node_pos,dist_matrix):
+
+def ComputeTime(a_pos, node_pos, dist_matrix):
     Adj = dist_matrix
     delta_time = Adj[int(node_pos)][int(a_pos)]
     return delta_time
 
-def DetachNode(t, cutting_node, levels=0,saved_nodes=0):
+
+def DetachNode(t, cutting_node, levels=0, saved_nodes=0):
     saved = 1
     father = t.search_nodes(name=cutting_node)[0]
     for node in father.iter_descendants("postorder"):
         saved += 1
-        #levels.pop(int(node.name))
-        #saved_nodes.append(int(node.name))
+        # levels.pop(int(node.name))
+        # saved_nodes.append(int(node.name))
     father.detach()
     return saved
+
 
 def Find_Solution(Forest, Time, a_pos, Hash, dist_matrix):
     # Construct the Key for Hash ( String: "Forest;time;pos_x,pos_y" )
     frame = 0
     total_budget = Time
-    #spread_time = update
-    #last_level_burnt = 0
+    # spread_time = update
+    # last_level_burnt = 0
     elapsed = 0
 
     key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos)
-    #graphSolution(plotting,frame)
+    # graphSolution(plotting,frame)
     Solution = []
     while Hash[key]['value'] != 0:
         frame += 1
@@ -39,12 +42,12 @@ def Find_Solution(Forest, Time, a_pos, Hash, dist_matrix):
 
         # Computes Remaining Time if agent travel to this node
         Time = Time - ComputeTime(a_pos, node, dist_matrix)
-        elapsed += (total_budget-Time)
+        elapsed += (total_budget - Time)
 
-        #all_levels = plotting[6]
-        #levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
-        #print('Levels to Burnt')
-        #print(levels_to_burnt)
+        # all_levels = plotting[6]
+        # levels_to_burnt = int((total_budget - Time)/spread_time) + last_level_burnt
+        # print('Levels to Burnt')
+        # print(levels_to_burnt)
         # for level in range(last_level_burnt+1,(last_level_burnt + levels_to_burnt)+1):
         #     print('Level')
         #     print(level)
@@ -61,10 +64,10 @@ def Find_Solution(Forest, Time, a_pos, Hash, dist_matrix):
         #     frame += 1
 
         # Change pos of agent to next node in solution
-        #pos = plotting[1]
+        # pos = plotting[1]
 
-        #pos[plotting[4]] = pos[int(node)]
-        #plotting[1] = pos
+        # pos[plotting[4]] = pos[int(node)]
+        # plotting[1] = pos
         # Saved Trees by selecting this node
         saved = DetachNode(Forest, node)
 
@@ -76,20 +79,20 @@ def Find_Solution(Forest, Time, a_pos, Hash, dist_matrix):
         a_pos = node
         Solution.append(node)
         # New Key
-        #graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
+        # graphSolution(plotting, frame,total_budget-Time,levels_to_burnt,elapsed)
         total_budget = Time
         key = Forest.write(format=8) + ';' + str(Time) + ';' + str(a_pos)
     return Solution
 
 
-def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elapsed=0):
+def graphSolution(plot_config, frame_num, spend_time=0, burned_levels=0, total_elapsed=0):
     Tree = plot_config[0]
     pos = plot_config[1]
     burnt_nodes = plot_config[2]
     remaining_nodes = plot_config[3]
     agent_pos = plot_config[4]
     path = plot_config[5]
-    saved_nodes= plot_config[7]
+    saved_nodes = plot_config[7]
 
     # This is for get max and min labels in plotting
     max_x_value = max(d[0] for d in pos.values())
@@ -111,10 +114,10 @@ def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elaps
     plt.xlabel('X-Position', fontdict=None, labelpad=20)
     plt.ylabel('Y-Position', fontdict=None, labelpad=20)
 
-    scal=10
-    plt.text(scal*-.8, scal*-1.3,"Travel time: {0:.2f}".format(spend_time))
-    plt.text(scal*-.8, scal*-1.4, "Burned Levels: {l}".format(l=burned_levels))
-    plt.text(scal*-.8, scal*-1.5, "Total elapsed Time: {0:.2f}".format(total_elapsed))
+    scal = 10
+    plt.text(scal * -.8, scal * -1.3, "Travel time: {0:.2f}".format(spend_time))
+    plt.text(scal * -.8, scal * -1.4, "Burned Levels: {l}".format(l=burned_levels))
+    plt.text(scal * -.8, scal * -1.5, "Total elapsed Time: {0:.2f}".format(total_elapsed))
 
     graph = plt.gcf()
     frame = str(frame_num)
@@ -127,7 +130,7 @@ def graphSolution(plot_config,frame_num,spend_time=0,burned_levels=0,total_elaps
 
 def SavedNodes(t, cutting_node, Valid_):
     # First we get the corresponding branch of T
-    saved = 1 # As we "defend nodes" detach node is also saved
+    saved = 1  # As we "defend nodes" detach node is also saved
     father = t.search_nodes(name=cutting_node)[0]
 
     for node in father.iter_descendants("postorder"):
@@ -137,35 +140,25 @@ def SavedNodes(t, cutting_node, Valid_):
     # print("Saved:{}".format(saved))
     # Now, we detach this sub_tree from original
     father.detach()
-
     return saved
 
-#def SavedNodesbackTrack(Graph,node,Valids):
-    #for descendant in nx.descendants(Graph,node):
 
 def Compute_Total_Saved(all_nodes, T):
     for node in all_nodes:
-        saved = 1
-        father = T.search_nodes(name=node)[0]
-        for child in father.iter_descendants("postorder"):
-            saved += 1
+        children = list(nx.descendants(T, int(node)))
+        saved = 1 + len(children)
         all_nodes[node]['saved'] = saved
 
-def Detach_Node_List(cutting_node,all_nodes,T):
-    # Search Node in T
-    father = T.search_nodes(name=cutting_node)[0]
 
-    # Traverse all his childs
-    for node in father.iter_descendants("postorder"):
-        # Detach for Valid List
-        if node.name in all_nodes:
-            all_nodes.pop(node.name)
-
-    # At the end Detach Node from Tree
-    father.detach()
+def Detach_Node_List(cutting_node, all_nodes, T):
+    children = list(nx.descendants(T, int(cutting_node)))
+    for child in children:
+        if str(child) in all_nodes:
+            all_nodes.pop(str(child))
     return 0
 
-def SolutionPath( Solution, init_pos):
+
+def SolutionPath(Solution, init_pos):
     a_x = init_pos[0]
     a_y = init_pos[1]
     # print("Initial agent pos:{p}".format(p=[a_x, a_y]))
@@ -206,7 +199,7 @@ def SolutionPath( Solution, init_pos):
     return Path
 
 
-def generateInstance(load,path,directory):
+def generateInstance(load, path, directory):
     # Return [Tree,s_fire,Dist_Matrix,seed,scale,ax_pos,ay_pos]
     if load:
         T = nx.read_adjlist(path / directory / "MFF_Tree.adjlist")
@@ -229,7 +222,7 @@ def generateInstance(load,path,directory):
         seed = parameters["seed"]
         scale = parameters["scale"]
         starting_fire = parameters["start_fire"]
-        tree_height= parameters["tree_height"]
+        tree_height = parameters["tree_height"]
 
         T = nx.bfs_tree(T, starting_fire)
         T.add_node(N)
@@ -237,6 +230,5 @@ def generateInstance(load,path,directory):
         degrees = T.degree()
         max_degree = max(j for (i, j) in degrees)
         root_degree = T.degree[starting_fire]
-
 
         return T, N, starting_fire, T_Ad_Sym, seed, scale, N, max_degree, root_degree, tree_height
